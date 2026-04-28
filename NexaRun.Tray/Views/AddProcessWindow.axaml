@@ -1,0 +1,47 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="NexaRun.Tray.Views.AddProcessWindow"
+        Title="Add Process"
+        Width="500" Height="420"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+
+  <ScrollViewer>
+  <StackPanel Margin="20" Spacing="10">
+
+    <TextBlock Text="Name" />
+    <TextBox x:Name="NameBox" Watermark="e.g. myapi" />
+
+    <TextBlock Text="Executable" />
+    <Grid ColumnDefinitions="*,Auto">
+      <TextBox x:Name="ExecBox" Watermark="dotnet, node, ./app.exe …" />
+      <Button Grid.Column="1" x:Name="BrowseBtn" Content="…" Margin="6 0 0 0" />
+    </Grid>
+
+    <TextBlock Text="Arguments (optional)" />
+    <TextBox x:Name="ArgsBox" Watermark="run --project ./MyApi" />
+
+    <TextBlock Text="Working Directory (optional)" />
+    <Grid ColumnDefinitions="*,Auto">
+      <TextBox x:Name="CwdBox" Watermark="Defaults to current directory" />
+      <Button Grid.Column="1" x:Name="BrowseCwdBtn" Content="…" Margin="6 0 0 0" />
+    </Grid>
+
+    <CheckBox x:Name="AutoRestartBox" Content="Auto-restart on crash" IsChecked="True" Margin="0 4 0 0" />
+
+    <TextBlock Text="Max CPU % (optional — restart above this)" />
+    <TextBox x:Name="MaxCpuBox" Watermark="e.g. 80" />
+
+    <TextBlock Text="Max Memory MB (optional — restart above this)" />
+    <TextBox x:Name="MaxMemBox" Watermark="e.g. 512" />
+
+    <TextBlock x:Name="ErrorText" Foreground="Salmon" FontSize="12" IsVisible="False" />
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0 8 0 0">
+      <Button x:Name="CancelBtn" Content="Cancel" />
+      <Button x:Name="StartBtn"  Content="Save &amp; Start" />
+    </StackPanel>
+
+  </StackPanel>
+  </ScrollViewer>
+</Window>

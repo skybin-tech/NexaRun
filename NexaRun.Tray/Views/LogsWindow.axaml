@@ -1,0 +1,29 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="NexaRun.Tray.Views.LogsWindow"
+        Width="700" Height="500"
+        WindowStartupLocation="CenterScreen">
+
+  <DockPanel Margin="12">
+
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0 0 0 8">
+      <TextBlock x:Name="TitleText" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" />
+      <Button x:Name="RefreshBtn" Content="⟳ Refresh" />
+      <CheckBox x:Name="AutoScrollBox" Content="Auto-scroll" IsChecked="True" VerticalAlignment="Center" />
+    </StackPanel>
+
+    <ScrollViewer x:Name="Scroller">
+      <TextBox x:Name="LogBox"
+               IsReadOnly="True"
+               AcceptsReturn="True"
+               FontFamily="Consolas,Menlo,monospace"
+               FontSize="12"
+               TextWrapping="NoWrap"
+               Background="#1e1e1e"
+               Foreground="#d4d4d4"
+               BorderThickness="0"
+               Padding="8" />
+    </ScrollViewer>
+
+  </DockPanel>
+</Window>

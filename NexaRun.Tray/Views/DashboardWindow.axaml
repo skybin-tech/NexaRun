@@ -1,0 +1,168 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="NexaRun.Tray.Views.DashboardWindow"
+        Title="NexaRun — Dashboard"
+        Width="900" Height="600"
+        MinWidth="700" MinHeight="420"
+        WindowStartupLocation="CenterScreen">
+
+  <DockPanel>
+
+    <!-- Header -->
+    <Border DockPanel.Dock="Top"
+            Background="#1a1a2e" Padding="12,8">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Text="NexaRun Dashboard"
+                     FontSize="16" FontWeight="SemiBold"
+                     VerticalAlignment="Center"/>
+          <TextBlock x:Name="StatusText" Foreground="#f97316"
+                     VerticalAlignment="Center" FontSize="13"/>
+        </StackPanel>
+        <Button x:Name="RefreshBtn" Grid.Column="1"
+                Content="↻ Refresh" Padding="10,4"/>
+      </Grid>
+    </Border>
+
+    <!-- Main split: left process list, right detail panel -->
+    <Grid ColumnDefinitions="260,4,*">
+
+      <!-- Process list -->
+      <Border Background="#0f0f1a" BorderBrush="#2a2a4a" BorderThickness="0,0,1,0">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top"
+                     Text="PROCESSES" FontSize="11" FontWeight="Bold"
+                     Foreground="#6b7280" Margin="12,10,12,6"
+                     LetterSpacing="1.5"/>
+          <ListBox x:Name="ProcessList"
+                   Background="Transparent"
+                   SelectionMode="Single">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Grid ColumnDefinitions="8,*" Margin="4,2">
+                  <!-- Status dot -->
+                  <Ellipse Grid.Column="0" Width="8" Height="8"
+                           Fill="{Binding StatusColor}"
+                           VerticalAlignment="Center"/>
+                  <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                    <TextBlock Text="{Binding Name}"
+                               FontWeight="Medium" FontSize="13"/>
+                    <TextBlock Text="{Binding StatusLabel}"
+                               FontSize="11" Foreground="#9ca3af"/>
+                  </StackPanel>
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+      </Border>
+
+      <!-- Splitter -->
+      <GridSplitter Grid.Column="1" Width="4" Background="#1e1e3a"
+                    ResizeDirection="Columns"/>
+
+      <!-- Detail panel -->
+      <DockPanel Grid.Column="2">
+
+        <!-- Stats bar for selected process -->
+        <Border DockPanel.Dock="Top"
+                Background="#111128" Padding="16,10"
+                BorderBrush="#2a2a4a" BorderThickness="0,0,0,1"
+                x:Name="StatsBar" IsVisible="False">
+          <Grid ColumnDefinitions="*,*,*,*">
+            <StackPanel Grid.Column="0" Spacing="2">
+              <TextBlock Text="STATUS" FontSize="10" Foreground="#6b7280" FontWeight="Bold" LetterSpacing="1"/>
+              <TextBlock x:Name="DetailStatus" FontSize="14" FontWeight="SemiBold"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="2">
+              <TextBlock Text="PID" FontSize="10" Foreground="#6b7280" FontWeight="Bold" LetterSpacing="1"/>
+              <TextBlock x:Name="DetailPid" FontSize="14" Foreground="#d1d5db"/>
+            </StackPanel>
+            <StackPanel Grid.Column="2" Spacing="2">
+              <TextBlock Text="MEMORY" FontSize="10" Foreground="#6b7280" FontWeight="Bold" LetterSpacing="1"/>
+              <TextBlock x:Name="DetailMemory" FontSize="14" Foreground="#d1d5db"/>
+            </StackPanel>
+            <StackPanel Grid.Column="3" Spacing="2">
+              <TextBlock Text="RESTARTS" FontSize="10" Foreground="#6b7280" FontWeight="Bold" LetterSpacing="1"/>
+              <TextBlock x:Name="DetailRestarts" FontSize="14" Foreground="#d1d5db"/>
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <!-- Run history section -->
+        <DockPanel x:Name="HistoryPanel" IsVisible="False">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"
+                      Spacing="8" Margin="16,10,16,8">
+            <TextBlock x:Name="HistoryTitle"
+                       FontSize="13" FontWeight="SemiBold"
+                       VerticalAlignment="Center"/>
+            <TextBlock Text="— last 7 days" FontSize="12" Foreground="#6b7280"
+                       VerticalAlignment="Center"/>
+          </StackPanel>
+
+          <!-- 7-day uptime bar chart -->
+          <Border DockPanel.Dock="Top"
+                  Background="#0a0a18" Margin="16,0,16,12"
+                  Padding="10,8" CornerRadius="4"
+                  BorderBrush="#2a2a4a" BorderThickness="1">
+            <StackPanel Spacing="4">
+              <TextBlock Text="UPTIME — PAST 7 DAYS"
+                         FontSize="10" Foreground="#6b7280" FontWeight="Bold" LetterSpacing="1"
+                         Margin="0,0,0,4"/>
+              <ItemsControl x:Name="UptimeBars">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="3"/>
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <StackPanel Spacing="3" Width="80">
+                      <Border Height="40" Background="#1e1e3a"
+                              CornerRadius="2" ClipToBounds="True">
+                        <Border VerticalAlignment="Bottom"
+                                Height="{Binding BarHeight}"
+                                Background="{Binding BarColor}"
+                                CornerRadius="2"/>
+                      </Border>
+                      <TextBlock Text="{Binding DayLabel}"
+                                 FontSize="10" Foreground="#6b7280"
+                                 HorizontalAlignment="Center"/>
+                      <TextBlock Text="{Binding UptimePct}"
+                                 FontSize="10" Foreground="#9ca3af"
+                                 HorizontalAlignment="Center"/>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+
+          <!-- Run history grid -->
+          <DataGrid x:Name="RunGrid"
+                    IsReadOnly="True"
+                    CanUserReorderColumns="False"
+                    CanUserResizeColumns="True"
+                    GridLinesVisibility="Horizontal"
+                    Background="Transparent"
+                    Margin="16,0,16,16">
+            <DataGrid.Columns>
+              <DataGridTextColumn Header="Started"    Binding="{Binding StartedLabel}" Width="160"/>
+              <DataGridTextColumn Header="Duration"   Binding="{Binding DurationLabel}" Width="100"/>
+              <DataGridTextColumn Header="Outcome"    Binding="{Binding OutcomeLabel}"  Width="100"/>
+              <DataGridTextColumn Header="Exit Code"  Binding="{Binding ExitCodeLabel}" Width="*"/>
+            </DataGrid.Columns>
+          </DataGrid>
+        </DockPanel>
+
+        <!-- Empty state -->
+        <TextBlock x:Name="EmptyText"
+                   Text="Select a process to view its run history"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Foreground="#6b7280" FontSize="14"/>
+
+      </DockPanel>
+    </Grid>
+
+  </DockPanel>
+</Window>

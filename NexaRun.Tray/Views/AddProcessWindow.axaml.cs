@@ -1,0 +1,134 @@
+using Avalonia.Controls;
+using Avalonia.Platform.Storage;
+using NexaRun.Shared.Ipc;
+using NexaRun.Shared.Models;
+
+namespace NexaRun.Tray.Views;
+
+public partial class AddProcessWindow : Window
+{
+    private readonly IpcClient _ipc;
+    private readonly bool _isEdit;
+
+    private TextBox _nameBox = null!, _execBox = null!, _argsBox = null!, _cwdBox = null!, _maxCpuBox = null!, _maxMemBox = null!;
+    private CheckBox _autoRestartBox = null!;
+    private Button _startBtn = null!, _cancelBtn = null!, _browseBtn = null!, _browseCwdBtn = null!;
+    private TextBlock _errorText = null!;
+
+    public AddProcessWindow(IpcClient ipc, NexaProcess? existing = null)
+    {
+        _ipc = ipc;
+        _isEdit = existing != null;
+        InitializeComponent();
+
+        _nameBox       = this.FindControl<TextBox>("NameBox")!;
+        _execBox       = this.FindControl<TextBox>("ExecBox")!;
+        _argsBox       = this.FindControl<TextBox>("ArgsBox")!;
+        _cwdBox        = this.FindControl<TextBox>("CwdBox")!;
+        _maxCpuBox     = this.FindControl<TextBox>("MaxCpuBox")!;
+        _maxMemBox     = this.FindControl<TextBox>("MaxMemBox")!;
+        _autoRestartBox= this.FindControl<CheckBox>("AutoRestartBox")!;
+        _startBtn      = this.FindControl<Button>("StartBtn")!;
+        _cancelBtn     = this.FindControl<Button>("CancelBtn")!;
+        _browseBtn     = this.FindControl<Button>("BrowseBtn")!;
+        _browseCwdBtn  = this.FindControl<Button>("BrowseCwdBtn")!;
+        _errorText     = this.FindControl<TextBlock>("ErrorText")!;
+
+        if (existing != null)
+        {
+            Title = "Edit Process";
+            _startBtn.Content = "Save Changes";
+            _nameBox.Text = existing.Name;
+            _nameBox.IsEnabled = false; // name is the key, can't change it
+            _execBox.Text = existing.ExecutablePath;
+            _argsBox.Text = existing.Arguments;
+            _cwdBox.Text = existing.WorkingDirectory;
+            _autoRestartBox.IsChecked = existing.AutoRestart;
+            _maxCpuBox.Text = existing.MaxCpuPercent?.ToString() ?? string.Empty;
+            _maxMemBox.Text = existing.MaxMemoryMb?.ToString() ?? string.Empty;
+        }
+
+        WireEvents();
+    }
+
+    private void WireEvents()
+    {
+        _cancelBtn.Click    += (_, _) => Close();
+        _startBtn.Click     += async (_, _) => await Submit();
+        _browseBtn.Click    += async (_, _) => await BrowseFile(_execBox);
+        _browseCwdBtn.Click += async (_, _) => await BrowseFolder(_cwdBox);
+    }
+
+    private async Task Submit()
+    {
+        var name = _nameBox.Text?.Trim();
+        var exec = _execBox.Text?.Trim();
+
+        if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(exec))
+        {
+            ShowError("Name and Executable are required.");
+            return;
+        }
+
+        _startBtn.IsEnabled = false;
+        _startBtn.Content = _isEdit ? "Saving…" : "Starting…";
+
+        double? maxCpu = null;
+        long? maxMem = null;
+        if (double.TryParse(_maxCpuBox.Text?.Trim(), out var cpu) && cpu > 0) maxCpu = cpu;
+        if (long.TryParse(_maxMemBox.Text?.Trim(), out var mem) && mem > 0) maxMem = mem;
+
+        var response = await _ipc.Send(new IpcRequest
+        {
+            Command = _isEdit ? "update" : "start",
+            Options = new StartOptions
+            {
+                Name = name,
+                ExecutablePath = exec,
+                Arguments = _argsBox.Text?.Trim() ?? string.Empty,
+                WorkingDirectory = _cwdBox.Text?.Trim() ?? string.Empty,
+                AutoRestart = _autoRestartBox.IsChecked ?? true,
+                MaxCpuPercent = maxCpu,
+                MaxMemoryMb = maxMem
+            }
+        });
+
+        if (response.Success)
+        {
+            Close();
+        }
+        else
+        {
+            ShowError(response.Message);
+            _startBtn.IsEnabled = true;
+            _startBtn.Content = _isEdit ? "Save Changes" : "Save & Start";
+        }
+    }
+
+    private void ShowError(string message)
+    {
+        _errorText.Text = message;
+        _errorText.IsVisible = true;
+    }
+
+    private async Task BrowseFile(TextBox target)
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Select Executable",
+            AllowMultiple = false
+        });
+        if (files.Count > 0)
+            target.Text = files[0].TryGetLocalPath() ?? files[0].Path.LocalPath;
+    }
+
+    private async Task BrowseFolder(TextBox target)
+    {
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Select Working Directory"
+        });
+        if (folders.Count > 0)
+            target.Text = folders[0].TryGetLocalPath() ?? folders[0].Path.LocalPath;
+    }
+}
