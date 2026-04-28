@@ -1,6 +1,15 @@
 # Changelog
 
-## [2026-04-28]
+## [2026-04-28] — v1.0.1
+
+### Changed
+- All four assemblies strong-name signed with `skybin.snk` (Skybin Technology Private Limited)
+- Assembly names cleaned up: Tray → `NexaRun.exe`, Daemon → `NexaRun.Daemon.exe`, CLI → `NexaRun.Cli.exe` (installed to PATH as `nexarun.exe`)
+- Added `Product`, `Company`, and `Copyright` metadata to all exe projects — visible in Windows file properties
+- Installer updated: copyright set to "Skybin Technology Private Limited", CLI bin copy renamed to `nexarun.exe`
+- README rewritten as a user-facing guide — covers installation, tray app, CLI, examples, and auto-restart behaviour; removed developer/project structure content
+
+## [2026-04-28] — v1.0.0
 
 ### Added
 - `NexaRun.Daemon` — background Worker Service with named pipe IPC server, ProcessManager singleton, and DaemonWorker monitor loop
