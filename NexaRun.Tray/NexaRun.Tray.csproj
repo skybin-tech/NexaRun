@@ -7,8 +7,6 @@
     <Product>NexaRun</Product>
     <Company>Skybin Technology Private Limited</Company>
     <Copyright>Copyright © Skybin Technology Private Limited</Copyright>
-    <SignAssembly>true</SignAssembly>
-    <AssemblyOriginatorKeyFile>..\..\skybin.snk</AssemblyOriginatorKeyFile>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>

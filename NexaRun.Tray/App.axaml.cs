@@ -95,14 +95,29 @@ public class App : Application
 
     private static WindowIcon CreateIcon()
     {
-        // 16x16 green circle rendered into a bitmap as the tray icon
-        var bmp = new Avalonia.Media.Imaging.RenderTargetBitmap(new PixelSize(16, 16));
+        // 32x32 terminal icon: dark rounded rectangle with ">_" prompt in green
+        var bmp = new Avalonia.Media.Imaging.RenderTargetBitmap(new PixelSize(32, 32));
         using (var ctx = bmp.CreateDrawingContext())
         {
-            ctx.DrawEllipse(
-                new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.FromRgb(0, 200, 100)),
-                null,
-                new Avalonia.Rect(1, 1, 14, 14));
+            var bg      = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.FromRgb(30, 30, 30));
+            var green   = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.FromRgb(0, 220, 110));
+            var pen     = new Avalonia.Media.Pen(green, 1.5);
+
+            // Background rounded rect
+            ctx.DrawRectangle(bg, null, new Avalonia.Rect(1, 1, 30, 30), 4, 4);
+
+            // ">" chevron at (6, 11)→(11, 16)→(6, 21)
+            var chevron = new Avalonia.Media.PathGeometry();
+            using (var fig = chevron.Open())
+            {
+                fig.BeginFigure(new Avalonia.Point(6, 10), false);
+                fig.LineTo(new Avalonia.Point(13, 16));
+                fig.LineTo(new Avalonia.Point(6, 22));
+            }
+            ctx.DrawGeometry(null, pen, chevron);
+
+            // "_" underscore cursor at (16, 22)→(24, 22)
+            ctx.DrawLine(pen, new Avalonia.Point(16, 22), new Avalonia.Point(24, 22));
         }
         return new WindowIcon(bmp);
     }
