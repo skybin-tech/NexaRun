@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-05-08]
+
+### Changed
+- Upgraded System.CommandLine from 2.0.0 to 2.0.7 for compatibility with latest API
+- Removed SetHandler calls from all CLI commands; simplified command definitions to structure only (handlers to be wired separately)
+
 ## [2026-04-28] — v1.0.1
 
 ### Changed

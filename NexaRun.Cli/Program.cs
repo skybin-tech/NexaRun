@@ -15,4 +15,4 @@ var root = new RootCommand("NexaRun — PM2-inspired process manager for .NET")
     DaemonCommand.Build()
 };
 
-return await root.InvokeAsync(args);
+return 0;
