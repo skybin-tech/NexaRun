@@ -53,7 +53,8 @@ Click the NexaRun icon in the system tray to get started. Right-click for the me
 
 | Menu item | Action |
 |---|---|
-| **Import JSON** (submenu) | Pick a `.json` file or import bundled `nexarun-processes.json` |
+| **Import JSON…** | Pick a `.json` file (defaults to `nexarun-processes.json` if present) |
+| **Add Process → Import JSON…** | Same import from the Add Process window |
 | **Export JSON…** | Save definitions for another machine |
 | **Processes window** | **Import JSON** / **Export JSON** toolbar buttons (same as tray) |
 | **Open data folder** | Opens `%APPDATA%\NexaRun` |
@@ -72,7 +73,9 @@ Right-click tray → **Processes** to see all running processes. Select a proces
 
 ### Dashboard
 
-Right-click tray → **Dashboard** to see a 7-day history for any process — uptime bar chart and a full run history with start time, duration, and outcome.
+Right-click tray → **Dashboard** to see a 7-day history for any process — uptime bar chart, run history grid, and a **Logs** tab (same window). Use **↻ Refresh** for a full reload; background updates refresh the process list every 30 seconds only.
+
+Tray crashes are written to **Event Viewer** (Application → **NexaRun-Tray**) and `%APPDATA%\NexaRun\logs\tray-crash.log`.
 
 ---
 

@@ -555,17 +555,12 @@ public class ProcessManager
             ProcessStartInfo psi;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                // cmd /c resolves PATH + PATHEXT exactly like a terminal
-                psi = new ProcessStartInfo
-                {
-                    FileName = "cmd.exe",
-                    Arguments = $"/c \"{p.ExecutablePath}\" {p.Arguments}",
-                    WorkingDirectory = p.WorkingDirectory,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                };
+                psi = ProcessLaunchHelper.CreateStartInfo(
+                    p.ExecutablePath,
+                    p.Arguments,
+                    p.WorkingDirectory,
+                    redirectOutput: true,
+                    environment);
             }
             else
             {
@@ -577,14 +572,14 @@ public class ProcessManager
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
-                    CreateNoWindow = true
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
                 };
-            }
-
-            if (environment != null)
-            {
-                foreach (var (key, value) in environment)
-                    psi.Environment[key] = value;
+                if (environment != null)
+                {
+                    foreach (var (key, value) in environment)
+                        psi.Environment[key] = value;
+                }
             }
 
             var osProc = new Process { StartInfo = psi, EnableRaisingEvents = true };

@@ -6,10 +6,10 @@
 #
 # Requirements:
 #   - .NET 10 SDK
-#   - Inno Setup 6 installed (iscc.exe on PATH, or at default location)
+#   - Inno Setup 6 or 7 (ISCC.exe on PATH, or default install folder)
 
 param(
-    [string]$Version = "1.0.0",
+    [string]$Version = "1.0.5",
     [string]$OutDir  = "$PSScriptRoot\output"
 )
 
@@ -27,9 +27,19 @@ if (-not (Test-Path $SetupIcon)) {
 }
 Write-Host "    Setup icon: $SetupIcon" -ForegroundColor DarkGray
 
-# Clean previous publish
+# Clean solution + previous publish (avoids stale DLLs in the installer)
+Write-Host "==> Cleaning solution..." -ForegroundColor Yellow
+dotnet clean "$Root\NexaRun.slnx" -c Release | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "dotnet clean failed" }
+
 if (Test-Path $PubDir) { Remove-Item $PubDir -Recurse -Force }
 New-Item $PubDir -ItemType Directory | Out-Null
+
+Write-Host "==> Restoring + building solution (Release)..." -ForegroundColor Yellow
+dotnet restore "$Root\NexaRun.slnx"
+if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed" }
+dotnet build "$Root\NexaRun.slnx" -c Release
+if ($LASTEXITCODE -ne 0) { throw "dotnet build failed" }
 
 $PublishArgs = @(
     "--configuration", "Release",
@@ -56,24 +66,73 @@ Write-Host "==> Publishing Tray..." -ForegroundColor Yellow
 dotnet publish "$Root\NexaRun.Tray" @PublishArgs --output "$PubDir\tray"
 if ($LASTEXITCODE -ne 0) { throw "Tray publish failed" }
 
-# Compile Inno Setup installer
-$ISCC = "iscc.exe"
-if (-not (Get-Command $ISCC -ErrorAction SilentlyContinue)) {
-    $ISCC = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+$expected = @(
+    @{ Path = "$PubDir\daemon\NexaRun.Daemon.exe"; Label = "Daemon" },
+    @{ Path = "$PubDir\cli\NexaRun.Cli.exe"; Label = "CLI" },
+    @{ Path = "$PubDir\tray\NexaRun.exe"; Label = "Tray" }
+)
+foreach ($e in $expected) {
+    if (-not (Test-Path $e.Path)) {
+        throw "Publish missing $($e.Label): $($e.Path)"
+    }
+    $age = (Get-Item $e.Path).LastWriteTime
+    Write-Host "    OK $($e.Label) ($([math]::Round((Get-Item $e.Path).Length/1MB, 2)) MB, $age)" -ForegroundColor DarkGray
 }
-if (-not (Test-Path $ISCC)) {
-    throw "ISCC.exe not found. Install Inno Setup 6 or add it to PATH."
+if (-not (Test-Path "$Root\nexarun-processes.json")) {
+    throw "Missing $Root\nexarun-processes.json (required for installer)"
 }
+
+# Block accidental Debug / project bin output in publish folder
+foreach ($e in $expected) {
+    $full = (Get-Item $e.Path).FullName
+    if ($full -match '\\bin\\Debug\\' -or $full -match '\\bin\\Release\\net') {
+        throw "Refusing to pack non-publish build: $full`nRun only via this script (dotnet publish -c Release to installer\publish)."
+    }
+}
+
+$PubDirResolved = (Resolve-Path $PubDir).Path -replace '\\', '/'
+$OutDirResolved = (Resolve-Path $OutDir).Path -replace '\\', '/'
+
+# Compile Inno Setup installer (Inno Setup 6 or 7)
+function Find-Iscc {
+    $cmd = Get-Command iscc.exe -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+
+    $candidates = @(
+        "${env:ProgramFiles(x86)}\Inno Setup 7\ISCC.exe",
+        "$env:ProgramFiles\Inno Setup 7\ISCC.exe",
+        "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+        "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
+        "$env:LOCALAPPDATA\Programs\Inno Setup 7\ISCC.exe",
+        "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
+    )
+    foreach ($path in $candidates) {
+        if (Test-Path $path) { return $path }
+    }
+    return $null
+}
+
+$ISCC = Find-Iscc
+if (-not $ISCC) {
+    throw @"
+ISCC.exe not found. Install Inno Setup 6 or 7, or add its folder to PATH.
+Typical locations:
+  C:\Program Files (x86)\Inno Setup 7\ISCC.exe
+  C:\Program Files\Inno Setup 7\ISCC.exe
+"@
+}
+Write-Host "    ISCC: $ISCC" -ForegroundColor DarkGray
 
 if (-not (Test-Path $OutDir)) { New-Item $OutDir -ItemType Directory | Out-Null }
 
 Write-Host "==> Compiling installer..." -ForegroundColor Yellow
 Push-Location $PSScriptRoot
 try {
+    Write-Host "    PubDir (Release publish): $PubDirResolved" -ForegroundColor DarkGray
     & $ISCC `
         "/DAppVersion=$Version" `
-        "/DPubDir=$PubDir" `
-        "/DOutDir=$OutDir" `
+        "/DPubDir=$PubDirResolved" `
+        "/DOutDir=$OutDirResolved" `
         "NexaRun.iss"
 } finally {
     Pop-Location
@@ -82,4 +141,10 @@ try {
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed" }
 
 Write-Host ""
-Write-Host "==> Done! Installer at: $OutDir\NexaRun-$Version-Setup.exe" -ForegroundColor Green
+$setup = Join-Path $OutDir "NexaRun-$Version-Setup.exe"
+Write-Host ""
+Write-Host "==> Done! Installer at:" -ForegroundColor Green
+Write-Host "    $setup" -ForegroundColor Green
+Write-Host "    Size: $([math]::Round((Get-Item $setup).Length/1MB, 2)) MB, built $(Get-Item $setup).LastWriteTime" -ForegroundColor DarkGray
+Write-Host ""
+Write-Host "On the server: uninstall old NexaRun, run the new setup, then restart the NexaRunDaemon service." -ForegroundColor Cyan

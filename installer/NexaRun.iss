@@ -1,16 +1,18 @@
 ; NexaRun Inno Setup Script
-; Build with: build.ps1 or iscc.exe /DAppVersion=1.0.0 /DPubDir=.\publish /DOutDir=.\output NexaRun.iss
+;
+; ALWAYS build via:  installer\build.ps1
+; That script dotnet publish -c Release to installer\publish, then runs ISCC with /DPubDir.
+; Do NOT point PubDir at bin\Debug or bin\Release under each project — only installer\publish.
 
 #ifndef AppVersion
-  #define AppVersion "1.0.1"
+  #define AppVersion "1.0.5"
 #endif
 #ifndef PubDir
-  #define PubDir ".\publish"
+  #define PubDir "publish"
 #endif
 #ifndef OutDir
-  #define OutDir ".\output"
+  #define OutDir "output"
 #endif
-
 #define AppName      "NexaRun"
 #define AppPublisher "Skybin Technology Private Limited"
 #define AppCopyright "Copyright (C) Skybin Technology Private Limited"
@@ -88,10 +90,15 @@ Filename: "sc.exe"; Parameters: "description ""{#ServiceName}"" ""NexaRun backgr
 Filename: "sc.exe"; Parameters: "start ""{#ServiceName}"""; \
   Flags: runhidden waituntilterminated; StatusMsg: "Starting NexaRun Daemon..."
 
-; Launch tray app after install (user-visible)
+; Event Viewer source for tray crash reports (Application log)
+Filename: "powershell.exe"; \
+  Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""if (-not [System.Diagnostics.EventLog]::SourceExists('NexaRun-Tray')) {{ New-EventLog -LogName Application -Source 'NexaRun-Tray' }}"""; \
+  Flags: runhidden waituntilterminated
+
+; Launch tray app after install (no console window)
 Filename: "{app}\{#TrayExe}"; \
   Description: "Launch NexaRun Tray"; \
-  Flags: nowait postinstall skipifsilent
+  Flags: runhidden nowait postinstall skipifsilent
 
 [UninstallRun]
 ; Stop and remove the Windows Service on uninstall (RunOnceId = run each entry once per uninstall)
@@ -99,6 +106,9 @@ Filename: "sc.exe"; Parameters: "stop ""{#ServiceName}"""; \
   Flags: runhidden waituntilterminated; RunOnceId: "NexaRunDaemonStop"
 Filename: "sc.exe"; Parameters: "delete ""{#ServiceName}"""; \
   Flags: runhidden waituntilterminated; RunOnceId: "NexaRunDaemonDelete"
+Filename: "powershell.exe"; \
+  Parameters: "-NoProfile -ExecutionPolicy Bypass -Command ""if ([System.Diagnostics.EventLog]::SourceExists('NexaRun-Tray')) {{ Remove-EventLog -Source 'NexaRun-Tray' }}"""; \
+  Flags: runhidden waituntilterminated; RunOnceId: "NexaRunTrayEventLogRemove"
 
 [UninstallDelete]
 ; Leave %APPDATA%\NexaRun (user data) — only remove install dir

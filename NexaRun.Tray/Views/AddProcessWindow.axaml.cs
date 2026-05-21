@@ -2,22 +2,25 @@ using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using NexaRun.Shared.Ipc;
 using NexaRun.Shared.Models;
+using NexaRun.Tray.Services;
 
 namespace NexaRun.Tray.Views;
 
 public partial class AddProcessWindow : Window
 {
     private readonly IpcClient _ipc;
+    private readonly TrayConfigService _config;
     private readonly bool _isEdit;
 
     private TextBox _nameBox = null!, _execBox = null!, _argsBox = null!, _cwdBox = null!, _maxCpuBox = null!, _maxMemBox = null!;
     private CheckBox _autoRestartBox = null!;
-    private Button _startBtn = null!, _cancelBtn = null!, _browseBtn = null!, _browseCwdBtn = null!;
+    private Button _startBtn = null!, _cancelBtn = null!, _importJsonBtn = null!, _browseBtn = null!, _browseCwdBtn = null!;
     private TextBlock _errorText = null!;
 
     public AddProcessWindow(IpcClient ipc, NexaProcess? existing = null)
     {
         _ipc = ipc;
+        _config = new TrayConfigService(ipc);
         _isEdit = existing != null;
         InitializeComponent();
 
@@ -30,6 +33,7 @@ public partial class AddProcessWindow : Window
         _autoRestartBox= this.FindControl<CheckBox>("AutoRestartBox")!;
         _startBtn      = this.FindControl<Button>("StartBtn")!;
         _cancelBtn     = this.FindControl<Button>("CancelBtn")!;
+        _importJsonBtn = this.FindControl<Button>("ImportJsonBtn")!;
         _browseBtn     = this.FindControl<Button>("BrowseBtn")!;
         _browseCwdBtn  = this.FindControl<Button>("BrowseCwdBtn")!;
         _errorText     = this.FindControl<TextBlock>("ErrorText")!;
@@ -37,6 +41,7 @@ public partial class AddProcessWindow : Window
         if (existing != null)
         {
             Title = "Edit Process";
+            _importJsonBtn.IsVisible = false;
             _startBtn.Content = "Save Changes";
             _nameBox.Text = existing.Name;
             _nameBox.IsEnabled = false; // name is the key, can't change it
@@ -53,9 +58,10 @@ public partial class AddProcessWindow : Window
 
     private void WireEvents()
     {
-        _cancelBtn.Click    += (_, _) => Close();
-        _startBtn.Click     += async (_, _) => await Submit();
-        _browseBtn.Click    += async (_, _) => await BrowseFile(_execBox);
+        _cancelBtn.Click     += (_, _) => Close();
+        _startBtn.Click      += async (_, _) => await Submit();
+        _importJsonBtn.Click += async (_, _) => await ImportJson();
+        _browseBtn.Click     += async (_, _) => await BrowseFile(_execBox);
         _browseCwdBtn.Click += async (_, _) => await BrowseFolder(_cwdBox);
     }
 
@@ -102,6 +108,23 @@ public partial class AddProcessWindow : Window
             ShowError(response.Message);
             _startBtn.IsEnabled = true;
             _startBtn.Content = _isEdit ? "Save Changes" : "Save & Start";
+        }
+    }
+
+    private async Task ImportJson()
+    {
+        _importJsonBtn.IsEnabled = false;
+        try
+        {
+            await TrayImportExportActions.ImportFromPicker(this, _config, onSuccess: () =>
+            {
+                Close();
+                return Task.CompletedTask;
+            });
+        }
+        finally
+        {
+            _importJsonBtn.IsEnabled = true;
         }
     }
 

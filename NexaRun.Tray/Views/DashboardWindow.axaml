@@ -89,6 +89,42 @@
           </Grid>
         </Border>
 
+        <!-- Detail tabs -->
+        <StackPanel DockPanel.Dock="Top" x:Name="DetailTabs" IsVisible="False"
+                    Orientation="Horizontal" Spacing="6" Margin="16,8,16,0">
+          <Button x:Name="HistoryTabBtn" Content="Run history" Padding="12,4" />
+          <Button x:Name="LogsTabBtn" Content="Logs" Padding="12,4" />
+        </StackPanel>
+
+        <!-- Process logs (same window) -->
+        <DockPanel x:Name="LogsPanel" IsVisible="False">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"
+                      Spacing="8" Margin="16,8,16,8">
+            <TextBlock x:Name="LogsTitle" FontSize="13" FontWeight="SemiBold"
+                       VerticalAlignment="Center"/>
+            <Button x:Name="LogsRefreshBtn" Content="⟳ Refresh" Padding="10,4"/>
+            <CheckBox x:Name="LogsAutoScrollBox" Content="Auto-scroll"
+                      IsChecked="True" VerticalAlignment="Center"/>
+            <CheckBox x:Name="LogsLiveBox" Content="Live update"
+                      IsChecked="False" VerticalAlignment="Center"/>
+          </StackPanel>
+          <Border Margin="16,0,16,16" Background="#0a0a18"
+                  BorderBrush="#2a2a4a" BorderThickness="1" CornerRadius="4">
+            <ScrollViewer x:Name="LogsScroller" Height="220">
+              <TextBox x:Name="LogsBox"
+                       IsReadOnly="True"
+                       AcceptsReturn="True"
+                       FontFamily="Consolas,Menlo,monospace"
+                       FontSize="12"
+                       TextWrapping="NoWrap"
+                       Background="#1e1e1e"
+                       Foreground="#d4d4d4"
+                       BorderThickness="0"
+                       Padding="8"/>
+            </ScrollViewer>
+          </Border>
+        </DockPanel>
+
         <!-- Run history section -->
         <DockPanel x:Name="HistoryPanel" IsVisible="False">
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"

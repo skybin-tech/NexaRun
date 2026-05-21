@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using NexaRun.Shared;
 using NexaRun.Shared.Ipc;
 using NexaRun.Tray.Services;
@@ -24,6 +25,11 @@ public class App : Application
     {
         NexaRunPaths.EnsureDirectories();
 
+        Dispatcher.UIThread.UnhandledException += (_, e) =>
+        {
+            TrayCrashReporter.Report("UIThread", e.Exception, isTerminating: true);
+        };
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -41,13 +47,7 @@ public class App : Application
         AddMenuItem(menu, "Processes", (_, _) => ShowMainWindow());
         AddMenuItem(menu, "Dashboard", (_, _) => ShowDashboard());
         AddMenuItem(menu, "Add Process", (_, _) => ShowAddProcess());
-
-        var importSub = new NativeMenu();
-        AddMenuItem(importSub, "Import JSON file...", async (_, _) => await ImportJson());
-        AddMenuItem(importSub, "Import nexarun-processes.json", async (_, _) => await ImportBundledJson());
-
-        menu.Items.Add(new NativeMenuItem("Import JSON") { Menu = importSub });
-
+        AddMenuItem(menu, "Import JSON...", async (_, _) => await ImportJson());
         AddMenuItem(menu, "Export JSON...", async (_, _) => await ExportJson());
 
         menu.Items.Add(new NativeMenuItemSeparator());
@@ -70,12 +70,6 @@ public class App : Application
         var item = new NativeMenuItem(header);
         item.Click += click;
         menu.Items.Add(item);
-    }
-
-    private async Task ImportBundledJson()
-    {
-        if (_config == null) return;
-        await TrayImportExportActions.ImportBundledJson(_mainWindow, _config, RefreshMainWindow);
     }
 
     private async Task ImportJson()

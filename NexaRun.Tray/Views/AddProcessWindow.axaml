@@ -38,6 +38,7 @@
     <TextBlock x:Name="ErrorText" Foreground="Salmon" FontSize="12" IsVisible="False" />
 
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0 8 0 0">
+      <Button x:Name="ImportJsonBtn" Content="Import JSON…" />
       <Button x:Name="CancelBtn" Content="Cancel" />
       <Button x:Name="StartBtn"  Content="Save &amp; Start" />
     </StackPanel>

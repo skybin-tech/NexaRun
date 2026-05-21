@@ -1,21 +1,230 @@
 {
   "version": 1,
-  "exportedAt": "2026-05-21T00:00:00Z",
+  "exportedAt": "2026-05-21T12:00:00Z",
+  "exportedFrom": "ecosystem.config.js",
   "apps": [
     {
-      "name": "api",
-      "script": "dotnet",
-      "arguments": "run --project Api",
-      "workingDirectory": ".",
+      "name": "formfuse-app",
+      "script": "node",
+      "arguments": "node_modules/next/dist/bin/next start -p 3001",
+      "workingDirectory": "C:\\repo\\SSC.Nebula\\FormFuse\\frontend",
       "autoRestart": true,
       "maxRestartAttempts": 3,
-      "maxMemoryMb": 512,
-      "outLogFile": "./logs/api-out.log",
-      "errorLogFile": "./logs/api-err.log",
-      "logFile": "./logs/api-combined.log",
+      "maxMemoryMb": 500,
+      "outLogFile": "C:\\published\\logs\\formfuse-out.log",
+      "errorLogFile": "C:\\published\\logs\\formfuse-error.log",
       "logTimestamps": true,
       "environment": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "NODE_ENV": "production",
+        "PORT": "3001"
+      }
+    },
+    {
+      "name": "seorender-app",
+      "script": "node",
+      "arguments": "node_modules/next/dist/bin/next start -p 3004",
+      "workingDirectory": "C:\\repo\\SSC.Nebula\\seo-render\\frontend",
+      "autoRestart": true,
+      "maxRestartAttempts": 3,
+      "maxMemoryMb": 500,
+      "outLogFile": "C:\\published\\logs\\seorender-out.log",
+      "errorLogFile": "C:\\published\\logs\\seorender-error.log",
+      "logTimestamps": true,
+      "environment": {
+        "NODE_ENV": "production",
+        "PORT": "3004"
+      }
+    },
+    {
+      "name": "proquoter-app",
+      "script": "node",
+      "arguments": "node_modules/next/dist/bin/next start -p 3005",
+      "workingDirectory": "C:\\repo\\SSC.Nebula\\ProQuoter\\frontend",
+      "autoRestart": true,
+      "maxRestartAttempts": 3,
+      "maxMemoryMb": 500,
+      "outLogFile": "C:\\published\\logs\\proquoter-out.log",
+      "errorLogFile": "C:\\published\\logs\\proquoter-error.log",
+      "logTimestamps": true,
+      "environment": {
+        "NODE_ENV": "production",
+        "PORT": "3005"
+      }
+    },
+    {
+      "name": "voxify-app",
+      "script": "node",
+      "arguments": "node_modules/next/dist/bin/next start -p 3006",
+      "workingDirectory": "C:\\repo\\SSC.Nebula\\Voxify\\frontend",
+      "autoRestart": true,
+      "maxRestartAttempts": 3,
+      "maxMemoryMb": 500,
+      "outLogFile": "C:\\published\\logs\\voxify-out.log",
+      "errorLogFile": "C:\\published\\logs\\voxify-error.log",
+      "logTimestamps": true,
+      "environment": {
+        "NODE_ENV": "production",
+        "PORT": "3006"
+      }
+    },
+    {
+      "name": "deployra-app",
+      "script": "node",
+      "arguments": "node_modules/next/dist/bin/next start -p 3007",
+      "workingDirectory": "C:\\repo\\SSC.Nebula\\Deployra\\frontend",
+      "autoRestart": true,
+      "maxRestartAttempts": 3,
+      "maxMemoryMb": 500,
+      "outLogFile": "C:\\published\\logs\\deployra-out.log",
+      "errorLogFile": "C:\\published\\logs\\deployra-error.log",
+      "logTimestamps": true,
+      "environment": {
+        "NODE_ENV": "production",
+        "PORT": "3007"
+      }
+    },
+    {
+      "name": "freshbond-app",
+      "script": "node",
+      "arguments": "node_modules/next/dist/bin/next start -p 3008",
+      "workingDirectory": "C:\\repo\\SSC.Nebula\\FreshBond\\frontend",
+      "autoRestart": true,
+      "maxRestartAttempts": 3,
+      "maxMemoryMb": 500,
+      "outLogFile": "C:\\published\\logs\\freshbond-out.log",
+      "errorLogFile": "C:\\published\\logs\\freshbond-error.log",
+      "logTimestamps": true,
+      "environment": {
+        "NODE_ENV": "production",
+        "PORT": "3008"
+      }
+    },
+    {
+      "name": "minutely-app",
+      "script": "node",
+      "arguments": "node_modules/next/dist/bin/next start -p 3009",
+      "workingDirectory": "C:\\repo\\SSC.Nebula\\Minutely\\frontend",
+      "autoRestart": true,
+      "maxRestartAttempts": 3,
+      "maxMemoryMb": 500,
+      "outLogFile": "C:\\published\\logs\\minutely-out.log",
+      "errorLogFile": "C:\\published\\logs\\minutely-error.log",
+      "logTimestamps": true,
+      "environment": {
+        "NODE_ENV": "production",
+        "PORT": "3009"
+      }
+    },
+    {
+      "name": "credhub-app",
+      "script": "node",
+      "arguments": "node_modules/next/dist/bin/next start -p 3010",
+      "workingDirectory": "C:\\repo\\SSC.Nebula\\CredHub\\frontend",
+      "autoRestart": true,
+      "maxRestartAttempts": 3,
+      "maxMemoryMb": 500,
+      "outLogFile": "C:\\published\\logs\\credhub-out.log",
+      "errorLogFile": "C:\\published\\logs\\credhub-error.log",
+      "logTimestamps": true,
+      "environment": {
+        "NODE_ENV": "production",
+        "PORT": "3010"
+      }
+    },
+    {
+      "name": "vaulti-app",
+      "script": "node",
+      "arguments": "node_modules/next/dist/bin/next start -p 3011",
+      "workingDirectory": "C:\\repo\\SSC.Nebula\\Vaulti\\frontend",
+      "autoRestart": true,
+      "maxRestartAttempts": 3,
+      "maxMemoryMb": 500,
+      "outLogFile": "C:\\published\\logs\\vaulti-out.log",
+      "errorLogFile": "C:\\published\\logs\\vaulti-error.log",
+      "logTimestamps": true,
+      "environment": {
+        "NODE_ENV": "production",
+        "PORT": "3011"
+      }
+    },
+    {
+      "name": "coshot-app",
+      "script": "node",
+      "arguments": "node_modules/next/dist/bin/next start -p 3012",
+      "workingDirectory": "C:\\repo\\SSC.Nebula\\CoShot\\frontend",
+      "autoRestart": true,
+      "maxRestartAttempts": 3,
+      "maxMemoryMb": 500,
+      "outLogFile": "C:\\published\\logs\\coshot-out.log",
+      "errorLogFile": "C:\\published\\logs\\coshot-error.log",
+      "logTimestamps": true,
+      "environment": {
+        "NODE_ENV": "production",
+        "PORT": "3012"
+      }
+    },
+    {
+      "name": "skydrop-app",
+      "script": "node",
+      "arguments": "node_modules/next/dist/bin/next start -p 3013",
+      "workingDirectory": "C:\\repo\\SSC.Nebula\\SkyDrop",
+      "autoRestart": true,
+      "maxRestartAttempts": 3,
+      "maxMemoryMb": 500,
+      "outLogFile": "C:\\published\\logs\\skydrop-out.log",
+      "errorLogFile": "C:\\published\\logs\\skydrop-error.log",
+      "logTimestamps": true,
+      "environment": {
+        "NODE_ENV": "production",
+        "PORT": "3013"
+      }
+    },
+    {
+      "name": "aastha-ai-app",
+      "script": "node",
+      "arguments": "node_modules/next/dist/bin/next start -p 3020",
+      "workingDirectory": "C:\\repo\\SSC.Nebula\\aastha-ai\\frontend",
+      "autoRestart": true,
+      "maxRestartAttempts": 3,
+      "maxMemoryMb": 500,
+      "outLogFile": "C:\\published\\logs\\aastha-ai-out.log",
+      "errorLogFile": "C:\\published\\logs\\aastha-ai-error.log",
+      "logTimestamps": true,
+      "environment": {
+        "NODE_ENV": "production",
+        "PORT": "3020"
+      }
+    },
+    {
+      "name": "skybin-company-website",
+      "script": "node",
+      "arguments": "node_modules/next/dist/bin/next start -p 3002",
+      "workingDirectory": "C:\\inetpub\\wwwroot\\skybin.co",
+      "autoRestart": true,
+      "maxRestartAttempts": 3,
+      "maxMemoryMb": 500,
+      "outLogFile": "C:\\published\\logs\\skybin-website-out.log",
+      "errorLogFile": "C:\\published\\logs\\skybin-website-error.log",
+      "logTimestamps": true,
+      "environment": {
+        "NODE_ENV": "production",
+        "PORT": "3002"
+      }
+    },
+    {
+      "name": "skybin-producthub-website",
+      "script": "node",
+      "arguments": "node_modules/next/dist/bin/next start -p 3003",
+      "workingDirectory": "C:\\inetpub\\wwwroot\\skybin.io",
+      "autoRestart": true,
+      "maxRestartAttempts": 3,
+      "maxMemoryMb": 500,
+      "outLogFile": "C:\\published\\logs\\skybin-producthub-out.log",
+      "errorLogFile": "C:\\published\\logs\\skybin-producthub-error.log",
+      "logTimestamps": true,
+      "environment": {
+        "NODE_ENV": "production",
+        "PORT": "3003"
       }
     }
   ]

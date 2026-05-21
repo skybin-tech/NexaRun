@@ -44,7 +44,8 @@ public static class DaemonCommand
         Process.Start(new ProcessStartInfo(exe)
         {
             UseShellExecute = false,
-            CreateNoWindow = true
+            CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden
         });
 
         AnsiConsole.MarkupLine("[green]NexaRun daemon started.[/]");
