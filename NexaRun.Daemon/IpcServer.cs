@@ -68,8 +68,9 @@ public class IpcServer(ProcessManager processManager, ILogger<IpcServer> logger)
                 "restart" => await HandleRestart(request.ProcessName),
                 "delete" => await HandleDelete(request.ProcessName),
                 "list" => await HandleList(),
-                "logs" => await HandleLogs(request.ProcessName, request.LogLines ?? 50),
+                "logs" => await HandleLogs(request.ProcessName, request.LogLines ?? 50, request.LogStream),
                 "history" => await HandleHistory(request.ProcessName),
+                "import" when request.BatchOptions != null => await HandleImport(request.BatchOptions, request.StartAfterImport),
                 _ => new IpcResponse { Success = false, Message = $"Unknown command: {request.Command}" }
             };
         }
@@ -126,11 +127,19 @@ public class IpcServer(ProcessManager processManager, ILogger<IpcServer> logger)
         return new IpcResponse { Success = true, Processes = processes };
     }
 
-    private async Task<IpcResponse> HandleLogs(string? name, int lines)
+    private async Task<IpcResponse> HandleLogs(string? name, int lines, string? stream)
     {
         if (string.IsNullOrWhiteSpace(name))
             return new IpcResponse { Success = false, Message = "Process name required." };
-        var logs = await processManager.GetLogs(name, lines);
+
+        var logStream = stream?.ToLowerInvariant() switch
+        {
+            "out" => LogStream.Out,
+            "err" or "error" => LogStream.Err,
+            _ => LogStream.Combined
+        };
+
+        var logs = await processManager.GetLogs(name, lines, logStream);
         return new IpcResponse { Success = true, Logs = logs };
     }
 
@@ -144,6 +153,12 @@ public class IpcServer(ProcessManager processManager, ILogger<IpcServer> logger)
 
         var (success, message, process) = await processManager.Start(options);
         return new IpcResponse { Success = success, Message = message, Processes = process != null ? [process] : null };
+    }
+
+    private async Task<IpcResponse> HandleImport(List<StartOptions> options, bool start)
+    {
+        var (success, message) = await processManager.ImportBatch(options, start);
+        return new IpcResponse { Success = success, Message = message };
     }
 
     private async Task<IpcResponse> HandleHistory(string? name)

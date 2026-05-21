@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using NexaRun.Shared;
 using NexaRun.Shared.Models;
 
 namespace NexaRun.Daemon;
@@ -9,7 +10,7 @@ public class ProcessManager
 {
     private readonly List<NexaProcess> _processes = [];
     private readonly Dictionary<int, Process> _runningProcesses = [];
-    private readonly Dictionary<int, StreamWriter> _logWriters = [];
+    private readonly Dictionary<int, ProcessLogSession> _logSessions = [];
     private readonly Dictionary<int, TimeSpan> _lastCpuTime = [];
     private readonly Dictionary<int, DateTime> _lastCpuSample = [];
     private readonly List<ProcessRun> _runHistory = [];
@@ -24,12 +25,11 @@ public class ProcessManager
     public ProcessManager(ILogger<ProcessManager> logger)
     {
         _logger = logger;
-        _dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nexarun");
-        _logDir = Path.Combine(_dataDir, "logs");
-        _persistPath = Path.Combine(_dataDir, "processes.json");
-        _historyPath = Path.Combine(_dataDir, "history.json");
-        Directory.CreateDirectory(_dataDir);
-        Directory.CreateDirectory(_logDir);
+        NexaRunPaths.EnsureDirectories();
+        _dataDir = NexaRunPaths.DataDir;
+        _logDir = NexaRunPaths.LogDir;
+        _persistPath = NexaRunPaths.ProcessesFile;
+        _historyPath = NexaRunPaths.HistoryFile;
     }
 
     public async Task Load()
@@ -106,28 +106,24 @@ public class ProcessManager
             {
                 Id = _nextId++,
                 Name = options.Name,
-                AutoRestart = options.AutoRestart,
-                LogFile = Path.Combine(_logDir, $"{options.Name}.log")
+                AutoRestart = options.AutoRestart
             };
 
-            nexaProcess.ExecutablePath = options.ExecutablePath;
-            nexaProcess.Arguments = options.Arguments;
-            nexaProcess.MaxCpuPercent = options.MaxCpuPercent;
-            nexaProcess.MaxMemoryMb = options.MaxMemoryMb;
-            nexaProcess.WorkingDirectory = string.IsNullOrWhiteSpace(options.WorkingDirectory)
-                ? Directory.GetCurrentDirectory()
-                : options.WorkingDirectory;
+            ApplyDefinition(nexaProcess, options);
+            if (string.IsNullOrWhiteSpace(nexaProcess.WorkingDirectory))
+                nexaProcess.WorkingDirectory = Directory.GetCurrentDirectory();
             nexaProcess.Status = ProcessStatus.Starting;
 
             if (existing == null) _processes.Add(nexaProcess);
 
-            var launchError = LaunchProcess(nexaProcess);
+            var launchError = LaunchProcess(nexaProcess, options.Environment);
             if (launchError != null)
             {
                 nexaProcess.Status = ProcessStatus.Errored;
                 return (false, launchError, nexaProcess);
             }
 
+            nexaProcess.Restarts = 0;
             nexaProcess.StartedAt = DateTime.UtcNow;
             nexaProcess.Status = ProcessStatus.Online;
             RecordRunStart(nexaProcess.Name, nexaProcess.StartedAt);
@@ -180,7 +176,15 @@ public class ProcessManager
                 ExecutablePath = p.ExecutablePath,
                 Arguments = p.Arguments,
                 WorkingDirectory = p.WorkingDirectory,
-                AutoRestart = p.AutoRestart
+                AutoRestart = p.AutoRestart,
+                MaxRestartAttempts = p.MaxRestartAttempts,
+                MaxCpuPercent = p.MaxCpuPercent,
+                MaxMemoryMb = p.MaxMemoryMb,
+                OutLogFile = p.OutLogFile,
+                ErrorLogFile = p.ErrorLogFile,
+                CombinedLogFile = p.LogFile,
+                LogTimestamps = p.LogTimestamps,
+                Environment = p.Environment
             };
         }
         finally { _lock.Release(); }
@@ -217,7 +221,78 @@ public class ProcessManager
         finally { _lock.Release(); }
     }
 
-    public async Task<string> GetLogs(string name, int lines = 50)
+    public async Task<(bool success, string message)> ImportBatch(IReadOnlyList<StartOptions> options, bool start)
+    {
+        if (options.Count == 0)
+            return (false, "No processes to import.");
+
+        await _lock.WaitAsync();
+        try
+        {
+            foreach (var opt in options)
+            {
+                var existing = _processes.FirstOrDefault(p => p.Name == opt.Name);
+                if (existing != null)
+                {
+                    ApplyDefinition(existing, opt);
+                    if (existing.Status != ProcessStatus.Online)
+                    {
+                        existing.Status = ProcessStatus.Stopped;
+                        existing.Pid = null;
+                    }
+                }
+                else
+                {
+                    var p = new NexaProcess
+                    {
+                        Id = _nextId++,
+                        Name = opt.Name,
+                        Status = ProcessStatus.Stopped,
+                        AutoRestart = opt.AutoRestart
+                    };
+                    ApplyDefinition(p, opt);
+                    _processes.Add(p);
+                }
+            }
+
+            await Persist();
+        }
+        finally { _lock.Release(); }
+
+        if (!start)
+            return (true, $"Imported {options.Count} process(es). Use Start in the tray or CLI to run them.");
+
+        var started = 0;
+        var failed = 0;
+        foreach (var opt in options)
+        {
+            var (ok, _, _) = await Start(opt);
+            if (ok) started++;
+            else failed++;
+        }
+
+        return (true, $"Imported {options.Count} process(es). Started {started}, failed {failed}.");
+    }
+
+    private static void ApplyDefinition(NexaProcess process, StartOptions options)
+    {
+        ApplyLogPaths(process, options);
+        process.ExecutablePath = options.ExecutablePath;
+        process.Arguments = options.Arguments;
+        process.MaxCpuPercent = options.MaxCpuPercent;
+        process.MaxMemoryMb = options.MaxMemoryMb;
+        process.MaxRestartAttempts = options.MaxRestartAttempts > 0
+            ? options.MaxRestartAttempts
+            : ProcessDefaults.MaxRestartAttempts;
+        process.LogTimestamps = options.LogTimestamps;
+        process.Environment = options.Environment;
+        process.AutoRestart = options.AutoRestart;
+        process.WorkingDirectory = string.IsNullOrWhiteSpace(options.WorkingDirectory)
+            ? process.WorkingDirectory
+            : options.WorkingDirectory;
+    }
+
+    public async Task<string> GetLogs(string name, int lines = 50, LogStream stream = LogStream.Combined)
     {
         await _lock.WaitAsync();
         NexaProcess? p;
@@ -225,11 +300,41 @@ public class ProcessManager
         finally { _lock.Release(); }
 
         if (p == null) return $"No process named '{name}' found.";
-        if (!File.Exists(p.LogFile)) return "(no logs yet)";
 
-        var all = await File.ReadAllLinesAsync(p.LogFile);
+        var path = ResolveLogPathForRead(p, stream);
+        if (!File.Exists(path)) return "(no logs yet)";
+
+        var all = await File.ReadAllLinesAsync(path);
         return string.Join(Environment.NewLine, all.TakeLast(lines));
     }
+
+    private static void ApplyLogPaths(NexaProcess process, StartOptions options)
+    {
+        var defaultCombined = NexaRunPaths.DefaultProcessLogFile(options.Name);
+
+        process.OutLogFile = options.OutLogFile;
+        process.ErrorLogFile = options.ErrorLogFile;
+        process.LogFile = options.CombinedLogFile
+            ?? options.OutLogFile
+            ?? defaultCombined;
+        process.LogTimestamps = options.LogTimestamps;
+
+        foreach (var path in new[] { process.LogFile, process.OutLogFile, process.ErrorLogFile })
+        {
+            if (string.IsNullOrWhiteSpace(path)) continue;
+            var dir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dir))
+                Directory.CreateDirectory(dir);
+        }
+    }
+
+    private static string ResolveLogPathForRead(NexaProcess p, LogStream stream) =>
+        stream switch
+        {
+            LogStream.Out => p.OutLogFile ?? p.LogFile,
+            LogStream.Err => p.ErrorLogFile ?? p.LogFile,
+            _ => p.LogFile
+        };
 
     public async Task CheckAndRestartCrashed()
     {
@@ -247,10 +352,33 @@ public class ProcessManager
         {
             if (!_runningProcesses.TryGetValue(p.Id, out var osProc) || osProc.HasExited)
             {
-                _logger.LogWarning("Process '{Name}' exited unexpectedly. Restarting...", p.Name);
                 var crashedAt = DateTime.UtcNow;
                 RecordRunEnd(p.Name, crashedAt, exitCode: null, ProcessRunOutcome.Crashed);
                 p.Restarts++;
+
+                if (p.Restarts > p.MaxRestartAttempts)
+                {
+                    _logger.LogWarning(
+                        "Process '{Name}' stopped after {Count} restart attempts (max {Max})",
+                        p.Name, p.Restarts - 1, p.MaxRestartAttempts);
+                    await _lock.WaitAsync();
+                    try
+                    {
+                        p.Status = ProcessStatus.Errored;
+                        p.Pid = null;
+                        await WriteDaemonLogLine(p, $"NEXARUN: Stopped — exceeded max restart attempts ({p.MaxRestartAttempts})");
+                    }
+                    finally { _lock.Release(); }
+
+                    await Persist();
+                    await PersistHistory();
+                    continue;
+                }
+
+                _logger.LogWarning(
+                    "Process '{Name}' exited unexpectedly. Restarting ({Attempt}/{Max})...",
+                    p.Name, p.Restarts, p.MaxRestartAttempts);
+
                 int delay = Math.Min((int)Math.Pow(2, Math.Min(p.Restarts - 1, 4)) * 1000, 30000);
                 await Task.Delay(delay);
 
@@ -258,13 +386,13 @@ public class ProcessManager
                 try
                 {
                     p.Status = ProcessStatus.Starting;
-                    var restartError = LaunchProcess(p);
+                    var restartError = LaunchProcess(p, p.Environment);
                     if (restartError == null)
                     {
                         p.StartedAt = DateTime.UtcNow;
                         p.Status = ProcessStatus.Online;
                         RecordRunStart(p.Name, p.StartedAt);
-                        _logger.LogInformation("Process '{Name}' restarted (attempt {Count})", p.Name, p.Restarts);
+                        _logger.LogInformation("Process '{Name}' restarted (attempt {Count}/{Max})", p.Name, p.Restarts, p.MaxRestartAttempts);
                     }
                     else
                     {
@@ -306,6 +434,12 @@ public class ProcessManager
                     }
                     _lastCpuTime[p.Id] = currentCpu;
                     _lastCpuSample[p.Id] = now;
+
+                    if (p.Restarts > 0 &&
+                        (now - p.StartedAt).TotalSeconds >= ProcessDefaults.MinUptimeSecondsToResetRestarts)
+                    {
+                        p.Restarts = 0;
+                    }
                 }
                 catch { /* process may have exited between check and refresh */ }
             }
@@ -343,8 +477,8 @@ public class ProcessManager
             await _lock.WaitAsync();
             try
             {
-                if (_logWriters.TryGetValue(p.Id, out var w))
-                    await w.WriteLineAsync($"[{DateTime.Now:HH:mm:ss}] NEXARUN: Restarting — {reason}");
+                if (_logSessions.TryGetValue(p.Id, out var session))
+                    session.WriteSystem($"NEXARUN: Restarting — {reason}");
             }
             finally { _lock.Release(); }
 
@@ -407,13 +541,16 @@ public class ProcessManager
         }
     }
 
-    private string? LaunchProcess(NexaProcess p)
+    private string? LaunchProcess(NexaProcess p, Dictionary<string, string>? environment = null)
     {
         try
         {
-            var logStream = new FileStream(p.LogFile, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
-            var logWriter = new StreamWriter(logStream) { AutoFlush = true };
-            _logWriters[p.Id] = logWriter;
+            var logSession = new ProcessLogSession(
+                p.LogFile,
+                p.OutLogFile,
+                p.ErrorLogFile,
+                p.LogTimestamps);
+            _logSessions[p.Id] = logSession;
 
             ProcessStartInfo psi;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -444,15 +581,21 @@ public class ProcessManager
                 };
             }
 
+            if (environment != null)
+            {
+                foreach (var (key, value) in environment)
+                    psi.Environment[key] = value;
+            }
+
             var osProc = new Process { StartInfo = psi, EnableRaisingEvents = true };
 
             osProc.OutputDataReceived += (_, e) =>
             {
-                if (e.Data != null) logWriter.WriteLine($"[{DateTime.Now:HH:mm:ss}] {e.Data}");
+                if (e.Data != null) logSession.WriteStdout(e.Data);
             };
             osProc.ErrorDataReceived += (_, e) =>
             {
-                if (e.Data != null) logWriter.WriteLine($"[{DateTime.Now:HH:mm:ss}] ERR {e.Data}");
+                if (e.Data != null) logSession.WriteStderr(e.Data);
             };
 
             osProc.Start();
@@ -522,12 +665,21 @@ public class ProcessManager
         finally
         {
             _runningProcesses.Remove(p.Id);
-            if (_logWriters.TryGetValue(p.Id, out var w))
+            if (_logSessions.TryGetValue(p.Id, out var session))
             {
-                w.Dispose();
-                _logWriters.Remove(p.Id);
+                session.Dispose();
+                _logSessions.Remove(p.Id);
             }
         }
+    }
+
+    private Task WriteDaemonLogLine(NexaProcess p, string message)
+    {
+        if (_logSessions.TryGetValue(p.Id, out var session))
+            session.WriteSystem(message);
+        else if (File.Exists(p.LogFile))
+            File.AppendAllText(p.LogFile, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}: {message}{Environment.NewLine}");
+        return Task.CompletedTask;
     }
 
     private async Task Persist()

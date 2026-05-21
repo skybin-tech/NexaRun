@@ -6,4 +6,7 @@ public class IpcRequest
     public string? ProcessName { get; set; }
     public StartOptions? Options { get; set; }
     public int? LogLines { get; set; }
+    public string? LogStream { get; set; }
+    public List<StartOptions>? BatchOptions { get; set; }
+    public bool StartAfterImport { get; set; } = true;
 }

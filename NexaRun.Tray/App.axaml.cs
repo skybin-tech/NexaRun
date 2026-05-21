@@ -1,8 +1,11 @@
+using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using NexaRun.Shared;
 using NexaRun.Shared.Ipc;
+using NexaRun.Tray.Services;
 using NexaRun.Tray.Views;
 
 namespace NexaRun.Tray;
@@ -13,14 +16,18 @@ public class App : Application
     private MainWindow? _mainWindow;
     private DashboardWindow? _dashboardWindow;
     private readonly IpcClient _ipc = new();
+    private TrayConfigService? _config;
 
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
     public override void OnFrameworkInitializationCompleted()
     {
+        NexaRunPaths.EnsureDirectories();
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            _config = new TrayConfigService(_ipc);
             BuildTray(desktop);
         }
 
@@ -29,37 +36,72 @@ public class App : Application
 
     private void BuildTray(IClassicDesktopStyleApplicationLifetime desktop)
     {
-        var openItem = new NativeMenuItem("Processes");
-        openItem.Click += (_, _) => ShowMainWindow();
-
-        var dashItem = new NativeMenuItem("Dashboard");
-        dashItem.Click += (_, _) => ShowDashboard();
-
-        var addItem = new NativeMenuItem("Add Process");
-        addItem.Click += (_, _) => ShowAddProcess();
-
-        var separator = new NativeMenuItemSeparator();
-
-        var exitItem = new NativeMenuItem("Exit NexaRun");
-        exitItem.Click += (_, _) => desktop.Shutdown();
-
         var menu = new NativeMenu();
-        menu.Items.Add(openItem);
-        menu.Items.Add(dashItem);
-        menu.Items.Add(addItem);
-        menu.Items.Add(separator);
-        menu.Items.Add(exitItem);
+
+        AddMenuItem(menu, "Processes", (_, _) => ShowMainWindow());
+        AddMenuItem(menu, "Dashboard", (_, _) => ShowDashboard());
+        AddMenuItem(menu, "Add Process", (_, _) => ShowAddProcess());
+
+        var importSub = new NativeMenu();
+        AddMenuItem(importSub, "Import JSON file...", async (_, _) => await ImportJson());
+        AddMenuItem(importSub, "Import nexarun-processes.json", async (_, _) => await ImportBundledJson());
+
+        menu.Items.Add(new NativeMenuItem("Import JSON") { Menu = importSub });
+
+        AddMenuItem(menu, "Export JSON...", async (_, _) => await ExportJson());
+
+        menu.Items.Add(new NativeMenuItemSeparator());
+        AddMenuItem(menu, "Open data folder", (_, _) => OpenDataFolder());
+        AddMenuItem(menu, "Exit NexaRun", (_, _) => desktop.Shutdown());
 
         _trayIcon = new TrayIcon
         {
             Icon = CreateIcon(),
-            ToolTipText = "NexaRun",
-            Menu = menu,
-            IsVisible = true
+            ToolTipText = "NexaRun — right-click for menu",
+            IsVisible = true,
+            Menu = menu
         };
 
         _trayIcon.Clicked += (_, _) => ShowDashboard();
     }
+
+    private static void AddMenuItem(NativeMenu menu, string header, EventHandler click)
+    {
+        var item = new NativeMenuItem(header);
+        item.Click += click;
+        menu.Items.Add(item);
+    }
+
+    private async Task ImportBundledJson()
+    {
+        if (_config == null) return;
+        await TrayImportExportActions.ImportBundledJson(_mainWindow, _config, RefreshMainWindow);
+    }
+
+    private async Task ImportJson()
+    {
+        if (_config == null) return;
+        await TrayImportExportActions.ImportFromPicker(_mainWindow, _config, RefreshMainWindow);
+    }
+
+    private async Task ExportJson()
+    {
+        if (_config == null) return;
+        await TrayImportExportActions.ExportToPicker(_mainWindow, _config);
+    }
+
+    private static void OpenDataFolder()
+    {
+        NexaRunPaths.EnsureDirectories();
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = NexaRunPaths.DataDir,
+            UseShellExecute = true
+        });
+    }
+
+    private Task RefreshMainWindow() =>
+        _mainWindow?.IsVisible == true ? _mainWindow.RefreshFromTray() : Task.CompletedTask;
 
     private void ShowMainWindow()
     {
@@ -89,24 +131,20 @@ public class App : Application
 
     private void ShowAddProcess()
     {
-        var win = new AddProcessWindow(_ipc);
-        win.Show();
+        new AddProcessWindow(_ipc).Show();
     }
 
     private static WindowIcon CreateIcon()
     {
-        // 32x32 terminal icon: dark rounded rectangle with ">_" prompt in green
         var bmp = new Avalonia.Media.Imaging.RenderTargetBitmap(new PixelSize(32, 32));
         using (var ctx = bmp.CreateDrawingContext())
         {
-            var bg      = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.FromRgb(30, 30, 30));
-            var green   = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.FromRgb(0, 220, 110));
-            var pen     = new Avalonia.Media.Pen(green, 1.5);
+            var bg = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.FromRgb(30, 30, 30));
+            var green = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.FromRgb(0, 220, 110));
+            var pen = new Avalonia.Media.Pen(green, 1.5);
 
-            // Background rounded rect
             ctx.DrawRectangle(bg, null, new Avalonia.Rect(1, 1, 30, 30), 4, 4);
 
-            // ">" chevron at (6, 11)→(11, 16)→(6, 21)
             var chevron = new Avalonia.Media.PathGeometry();
             using (var fig = chevron.Open())
             {
@@ -115,8 +153,6 @@ public class App : Application
                 fig.LineTo(new Avalonia.Point(6, 22));
             }
             ctx.DrawGeometry(null, pen, chevron);
-
-            // "_" underscore cursor at (16, 22)→(24, 22)
             ctx.DrawLine(pen, new Avalonia.Point(16, 22), new Avalonia.Point(24, 22));
         }
         return new WindowIcon(bmp);

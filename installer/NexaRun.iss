@@ -2,7 +2,7 @@
 ; Build with: build.ps1 or iscc.exe /DAppVersion=1.0.0 /DPubDir=.\publish /DOutDir=.\output NexaRun.iss
 
 #ifndef AppVersion
-  #define AppVersion "1.0.0"
+  #define AppVersion "1.0.1"
 #endif
 #ifndef PubDir
   #define PubDir ".\publish"
@@ -19,7 +19,6 @@
 #define ServiceExe   "NexaRun.Daemon.exe"
 #define TrayExe      "NexaRun.exe"
 #define CliExe       "NexaRun.Cli.exe"
-
 [Setup]
 AppId={{E2A4F1B3-7C5D-4E8A-9F2B-1D3C6A8E0F47}
 AppName={#AppName}
@@ -37,6 +36,8 @@ Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=admin
+; Relative to this .iss file (installer/). Do not pass absolute paths via /D — backslashes break (\N in NexaRun).
+SetupIconFile=assets\NexaRun.ico
 UninstallDisplayIcon={app}\{#TrayExe}
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
@@ -45,7 +46,7 @@ MinVersion=10.0
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "startwitwindows"; Description: "Start NexaRun Tray at Windows login"; GroupDescription: "Startup:"; Flags: unchecked
+Name: "startwitwindows"; Description: "Start NexaRun Tray at Windows login (all users)"; GroupDescription: "Startup:"; Flags: unchecked
 Name: "desktopicon";     Description: "Create a &desktop shortcut for NexaRun Tray"; GroupDescription: "Additional icons:"
 
 [Files]
@@ -58,6 +59,7 @@ Source: "{#PubDir}\cli\{#CliExe}"; DestDir: "{app}\bin"; Flags: ignoreversion; D
 
 ; Tray app
 Source: "{#PubDir}\tray\{#TrayExe}";      DestDir: "{app}";      Flags: ignoreversion
+Source: "..\nexarun-processes.json"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 ; Start Menu
@@ -67,8 +69,8 @@ Name: "{group}\Uninstall NexaRun";   Filename: "{uninstallexe}"
 ; Desktop shortcut (optional task)
 Name: "{autodesktop}\NexaRun";       Filename: "{app}\{#TrayExe}";   Tasks: desktopicon
 
-; Startup (optional task) — run tray at login
-Name: "{userstartup}\NexaRun Tray";  Filename: "{app}\{#TrayExe}";   Tasks: startwitwindows
+; Startup (optional task) — {commonstartup} matches admin install (machine-wide service)
+Name: "{commonstartup}\NexaRun Tray"; Filename: "{app}\{#TrayExe}"; Tasks: startwitwindows
 
 [Registry]
 ; Add {app}\bin to system PATH so "nexarun" works in any terminal
@@ -92,13 +94,16 @@ Filename: "{app}\{#TrayExe}"; \
   Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-; Stop and remove the Windows Service on uninstall
-Filename: "sc.exe"; Parameters: "stop ""{#ServiceName}""";   Flags: runhidden waituntilterminated
-Filename: "sc.exe"; Parameters: "delete ""{#ServiceName}"""; Flags: runhidden waituntilterminated
+; Stop and remove the Windows Service on uninstall (RunOnceId = run each entry once per uninstall)
+Filename: "sc.exe"; Parameters: "stop ""{#ServiceName}"""; \
+  Flags: runhidden waituntilterminated; RunOnceId: "NexaRunDaemonStop"
+Filename: "sc.exe"; Parameters: "delete ""{#ServiceName}"""; \
+  Flags: runhidden waituntilterminated; RunOnceId: "NexaRunDaemonDelete"
 
 [UninstallDelete]
-; Leave ~/.nexarun (user data) — only remove install dir
+; Leave %APPDATA%\NexaRun (user data) — only remove install dir
 Type: filesandordirs; Name: "{app}"
+Type: files; Name: "{commonstartup}\NexaRun Tray.lnk"
 
 [Code]
 // Checks whether a given path is already in the system PATH variable.

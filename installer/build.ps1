@@ -19,6 +19,14 @@ $PubDir  = "$PSScriptRoot\publish"
 
 Write-Host "==> Building NexaRun $Version" -ForegroundColor Cyan
 
+Write-Host "==> Generating NexaRun.ico..." -ForegroundColor Yellow
+& "$PSScriptRoot\generate-icon.ps1"
+$SetupIcon = (Resolve-Path "$PSScriptRoot\assets\NexaRun.ico").Path
+if (-not (Test-Path $SetupIcon)) {
+    throw "Setup icon not found at $SetupIcon. Run installer\generate-icon.ps1 first."
+}
+Write-Host "    Setup icon: $SetupIcon" -ForegroundColor DarkGray
+
 # Clean previous publish
 if (Test-Path $PubDir) { Remove-Item $PubDir -Recurse -Force }
 New-Item $PubDir -ItemType Directory | Out-Null
@@ -60,11 +68,16 @@ if (-not (Test-Path $ISCC)) {
 if (-not (Test-Path $OutDir)) { New-Item $OutDir -ItemType Directory | Out-Null }
 
 Write-Host "==> Compiling installer..." -ForegroundColor Yellow
-& $ISCC `
-    "/DAppVersion=$Version" `
-    "/DPubDir=$PubDir" `
-    "/DOutDir=$OutDir" `
-    "$PSScriptRoot\NexaRun.iss"
+Push-Location $PSScriptRoot
+try {
+    & $ISCC `
+        "/DAppVersion=$Version" `
+        "/DPubDir=$PubDir" `
+        "/DOutDir=$OutDir" `
+        "NexaRun.iss"
+} finally {
+    Pop-Location
+}
 
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed" }
 

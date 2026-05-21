@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "exportedAt": "2026-05-21T00:00:00Z",
+  "apps": [
+    {
+      "name": "api",
+      "script": "dotnet",
+      "arguments": "run --project Api",
+      "workingDirectory": ".",
+      "autoRestart": true,
+      "maxRestartAttempts": 3,
+      "maxMemoryMb": 512,
+      "outLogFile": "./logs/api-out.log",
+      "errorLogFile": "./logs/api-err.log",
+      "logFile": "./logs/api-combined.log",
+      "logTimestamps": true,
+      "environment": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  ]
+}

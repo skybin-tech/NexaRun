@@ -12,6 +12,9 @@ The installer will:
 - Install the **NexaRun Daemon** as a Windows Service that starts automatically with Windows
 - Add the **`nexarun` CLI** to your system PATH
 - Launch the **NexaRun tray app** so you can start managing processes immediately
+- Ship a sample `nexarun-processes.json` for JSON import
+
+To build the installer from source: run `installer\generate-icon.ps1` then `installer\build.ps1` (requires Inno Setup 6).
 
 ---
 
@@ -46,6 +49,15 @@ Click the NexaRun icon in the system tray to get started. Right-click for the me
 | Node server | `node` | `server.js` | `C:\Projects\worker` |
 | Python script | `python` | `app.py` | `C:\Projects\bot` |
 
+### Tray menu — import / export
+
+| Menu item | Action |
+|---|---|
+| **Import JSON** (submenu) | Pick a `.json` file or import bundled `nexarun-processes.json` |
+| **Export JSON…** | Save definitions for another machine |
+| **Processes window** | **Import JSON** / **Export JSON** toolbar buttons (same as tray) |
+| **Open data folder** | Opens `%APPDATA%\NexaRun` |
+
 ### Processes Window
 
 Right-click tray → **Processes** to see all running processes. Select a process to use the action buttons:
@@ -66,37 +78,199 @@ Right-click tray → **Dashboard** to see a 7-day history for any process — up
 
 ## CLI
 
-The `nexarun` command is available in any terminal after installation.
+The `nexarun` command is on your PATH after install. It talks to the **NexaRun Daemon** (Windows service). If the daemon is not running, commands fail with:
 
-```bash
-# Add and start a process
+```text
+Daemon is not running. Start it with: nexarun daemon start
+```
+
+**Data folder:** `%APPDATA%\NexaRun\` (`processes.json`, `history.json`, `logs\`)
+
+**Dev usage:** `dotnet run --project NexaRun.Cli -- <command>`
+
+### Command overview
+
+```text
+nexarun
+├── start <executable>     Start one process
+├── import <file.json>     Import processes from JSON
+├── stop <name>            Stop a process
+├── restart <name>         Restart a process
+├── delete <name>          Remove from managed list
+├── list                   List all processes
+├── logs <name>            Show process logs
+└── daemon
+    ├── start              Start daemon (service or dev exe)
+    └── stop               Stop daemon service
+```
+
+### `nexarun start`
+
+Start a single process.
+
+```powershell
+nexarun start <executable> [options]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--name <name>` | Process name (default: executable name) |
+| `--args "<args>"` | Arguments for the executable |
+| `--cwd <path>` | Working directory |
+| `--no-autorestart` | Do not restart after crash |
+| `--max-restarts <n>` | Max crash retries (default: **3**) |
+| `--max-cpu <percent>` | Restart if CPU exceeds this % |
+| `--max-memory <mb>` | Restart if memory exceeds this MB |
+| `--log <path>` | Combined log file |
+| `--out <path>` | Stdout log file |
+| `--error <path>` | Stderr log file |
+| `--time` | Timestamp each log line |
+
+```powershell
 nexarun start dotnet --name myapi --args "run --project ." --cwd "C:\Projects\MyApi"
 nexarun start npm --name mysite --args "run start" --cwd "C:\Projects\my-site"
+nexarun start node --name worker --args "server.js" --cwd "C:\Projects\worker"
+nexarun start python --name bot --args "app.py" --cwd "C:\Projects\bot"
+```
 
-# Manage processes
+### `nexarun import`
+
+Import one or more processes from a JSON file. See [Process JSON](#process-json-nexarun-processesjson) below.
+
+```powershell
+nexarun import <file.json> [options]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--only <name>` | Import and start only this app name |
+| `--no-start` | Register only; do not start processes |
+
+```powershell
+nexarun import nexarun-processes.json
+nexarun import C:\deploy\processes.json --only api
+nexarun import nexarun-processes.json --no-start
+```
+
+### `nexarun list`
+
+```powershell
 nexarun list
-nexarun stop myapi
-nexarun restart myapi
-nexarun logs myapi
-nexarun logs myapi --lines 100
-nexarun delete myapi
+```
 
-# Daemon control
+Shows id, name, status, pid, restarts, memory, and uptime.
+
+### `nexarun stop` / `restart` / `delete`
+
+```powershell
+nexarun stop <name>
+nexarun restart <name>
+nexarun delete <name>
+```
+
+### `nexarun logs`
+
+```powershell
+nexarun logs <name> [options]
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--lines <n>` | `50` | Lines to show |
+| `--out` | — | Stdout log only |
+| `--err` | — | Stderr log only |
+| `--follow` | — | Stream logs (poll every 1s; Ctrl+C to exit) |
+
+```powershell
+nexarun logs myapi
+nexarun logs myapi --lines 200 --err
+nexarun logs myapi --follow
+```
+
+Default log path: `%APPDATA%\NexaRun\logs\<name>.log`
+
+### `nexarun daemon`
+
+```powershell
 nexarun daemon start
 nexarun daemon stop
 ```
+
+Starts or stops the Windows service `NexaRunDaemon` (or the dev daemon exe when not installed).
+
+### Quick reference
+
+| Command | Example |
+|---------|---------|
+| Start | `nexarun start dotnet --name api --args "run" --cwd C:\Api` |
+| Import | `nexarun import nexarun-processes.json` |
+| List | `nexarun list` |
+| Stop | `nexarun stop api` |
+| Restart | `nexarun restart api` |
+| Delete | `nexarun delete api` |
+| Logs | `nexarun logs api --follow` |
+| Daemon | `nexarun daemon start` |
+
+```powershell
+nexarun --help
+nexarun start --help
+nexarun import --help
+```
+
+More detail: **[CLI-GUIDE.md](CLI-GUIDE.md)**
+
+## Process JSON (`nexarun-processes.json`)
+
+Import/export uses **JSON only** (no `.js` ecosystem files). Example in the repo root: `nexarun-processes.json`.
+
+```json
+{
+  "version": 1,
+  "apps": [
+    {
+      "name": "api",
+      "script": "dotnet",
+      "arguments": "run --project Api",
+      "workingDirectory": "C:\\Projects\\MyApi",
+      "autoRestart": true,
+      "maxRestartAttempts": 3,
+      "maxMemoryMb": 512,
+      "outLogFile": "./logs/api-out.log",
+      "errorLogFile": "./logs/api-err.log",
+      "logFile": "./logs/api-combined.log",
+      "logTimestamps": true,
+      "environment": { "ASPNETCORE_ENVIRONMENT": "Development" }
+    }
+  ]
+}
+```
+
+| Field | Description |
+|---|---|
+| `name` | Process name |
+| `script` | Executable or command |
+| `arguments` | Command-line arguments |
+| `workingDirectory` | Working folder |
+| `autoRestart` | Restart on crash |
+| `maxRestartAttempts` | Max crash retries (default 3) |
+| `maxMemoryMb` / `maxCpuPercent` | Restart when exceeded |
+| `outLogFile` / `errorLogFile` / `logFile` | Log paths |
+| `logTimestamps` | Timestamp each log line |
+| `environment` | Env vars (object) |
 
 ---
 
 ## Process Logs
 
-Every process's output is saved to `%USERPROFILE%\.nexarun\logs\<name>.log` with timestamps. Open it any time with the **Logs** button or the `nexarun logs` command.
+Process definitions and logs are stored under `%APPDATA%\NexaRun\` (`processes.json`, `history.json`, `logs\`). Legacy `%USERPROFILE%\.nexarun\` data is migrated automatically on first run.
+
+By default, output is saved to `%APPDATA%\NexaRun\logs\<name>.log`. Configure log paths in the JSON file or with `--out` / `--error` / `--log` on `nexarun start`. Log files rotate at 10 MB (`.log.1` backup). Use `logTimestamps` or `--time` for timestamp prefixes.
 
 ---
 
 ## Auto-Restart
 
-Crashed processes restart automatically with exponential backoff (1s, 2s, 4s, 8s, up to 30s max) so a tight crash loop doesn't hammer the system.
+Crashed processes restart automatically with exponential backoff (1s, 2s, 4s, 8s, up to 30s max) so a tight crash loop doesn't hammer the system. By default NexaRun retries **3 times**; after that the process is marked errored until you start it again. Override with `--max-restarts` on the CLI. If a process stays up for 30 seconds, the restart counter resets.
 
 If you set a CPU or memory limit, NexaRun will also restart the process when it exceeds the limit. The reason is logged to the process log file.
 

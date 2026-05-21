@@ -1,13 +1,13 @@
 using NexaRun.Daemon;
+using NexaRun.Shared;
 using Serilog;
+
+NexaRunPaths.EnsureDirectories();
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
     .WriteTo.Console()
-    .WriteTo.File(
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".nexarun", "logs", "nexarun-daemon.log"),
-        rollingInterval: RollingInterval.Day)
+    .WriteTo.File(NexaRunPaths.DaemonLogFile, rollingInterval: RollingInterval.Day)
     .CreateLogger();
 
 try

@@ -1,5 +1,24 @@
 # Changelog
 
+## [2026-05-21]
+
+### Added
+- JSON import/export (`nexarun import`, tray **Import JSON** / **Export JSON**, Processes window toolbar)
+- `CLI-GUIDE.md` and expanded README CLI section; sample `nexarun-processes.json`
+- Data directory `%APPDATA%\NexaRun\` with migration from `~/.nexarun`
+- PM2-style CLI: `start`, `stop`, `restart`, `delete`, `list`, `logs` (`--out`, `--err`, `--follow`), `daemon start|stop`
+- Log rotation at 10 MB; separate stdout/stderr streams; `--log`, `--out`, `--error`, `--time` on start
+- Max 3 crash restarts (default, `--max-restarts`); counter resets after 30s stable uptime
+- Installer `generate-icon.ps1` (PNG ICO) and custom setup `.exe` icon; tray `ApplicationIcon`
+
+### Changed
+- Daemon batch **import** IPC; `ProcessManager` restart limits and log sessions
+- Inno Setup: `RunOnceId`, `{commonstartup}`, relative `SetupIconFile=assets\NexaRun.ico`
+
+### Fixed
+- CLI command dispatch (`root.Parse(args).Invoke()`)
+- Setup installer no longer shows default Inno icon (broken `/D` path and invalid BMP ICO)
+
 ## [2026-05-08]
 
 ### Changed

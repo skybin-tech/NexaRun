@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using NexaRun.Shared.Ipc;
 using NexaRun.Shared.Models;
+using NexaRun.Tray.Services;
 using NexaRun.Tray.ViewModels;
 
 namespace NexaRun.Tray.Views;
@@ -9,20 +10,25 @@ namespace NexaRun.Tray.Views;
 public partial class MainWindow : Window
 {
     private readonly IpcClient _ipc;
+    private readonly TrayConfigService _config;
     private DispatcherTimer? _timer;
     private ProcessRow? _selected;
 
     private DataGrid _processGrid = null!;
-    private Button _addBtn = null!, _refreshBtn = null!, _stopBtn = null!, _restartBtn = null!, _logsBtn = null!, _editBtn = null!, _deleteBtn = null!;
+    private Button _addBtn = null!, _importBtn = null!, _exportBtn = null!, _refreshBtn = null!;
+    private Button _stopBtn = null!, _restartBtn = null!, _logsBtn = null!, _editBtn = null!, _deleteBtn = null!;
     private TextBlock _statusText = null!;
 
     public MainWindow(IpcClient ipc)
     {
         _ipc = ipc;
+        _config = new TrayConfigService(ipc);
         InitializeComponent();
 
         _processGrid = this.FindControl<DataGrid>("ProcessGrid")!;
         _addBtn      = this.FindControl<Button>("AddBtn")!;
+        _importBtn   = this.FindControl<Button>("ImportBtn")!;
+        _exportBtn   = this.FindControl<Button>("ExportBtn")!;
         _refreshBtn  = this.FindControl<Button>("RefreshBtn")!;
         _stopBtn     = this.FindControl<Button>("StopBtn")!;
         _restartBtn  = this.FindControl<Button>("RestartBtn")!;
@@ -48,6 +54,8 @@ public partial class MainWindow : Window
         };
 
         _addBtn.Click     += (_, _) => new AddProcessWindow(_ipc).Show();
+        _importBtn.Click  += async (_, _) => await TrayImportExportActions.ImportFromPicker(this, _config, Refresh);
+        _exportBtn.Click  += async (_, _) => await TrayImportExportActions.ExportToPicker(this, _config);
         _refreshBtn.Click += async (_, _) => await Refresh();
         _stopBtn.Click    += async (_, _) => await SendAction("stop", _selected?.Name);
         _restartBtn.Click += async (_, _) => await SendAction("restart", _selected?.Name);
@@ -65,6 +73,8 @@ public partial class MainWindow : Window
         _timer.Tick += async (_, _) => await Refresh();
         _timer.Start();
     }
+
+    public async Task RefreshFromTray() => await Refresh();
 
     private async Task Refresh()
     {

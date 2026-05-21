@@ -4,9 +4,10 @@ using NexaRun.Shared.Ipc;
 
 var client = new IpcClient();
 
-var root = new RootCommand("NexaRun — PM2-inspired process manager for .NET")
+var root = new RootCommand("NexaRun — PM2-inspired process manager for Windows")
 {
     StartCommand.Build(client),
+    ImportCommand.Build(client),
     StopCommand.Build(client),
     RestartCommand.Build(client),
     DeleteCommand.Build(client),
@@ -15,4 +16,4 @@ var root = new RootCommand("NexaRun — PM2-inspired process manager for .NET")
     DaemonCommand.Build()
 };
 
-return 0;
+return root.Parse(args).Invoke();
