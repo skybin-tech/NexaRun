@@ -1,3 +1,4 @@
+using NexaRun.Shared;
 using NexaRun.Shared.Models;
 
 namespace NexaRun.Tray.ViewModels;
@@ -6,7 +7,10 @@ public class ProcessRow(NexaProcess p)
 {
     public int Id { get; } = p.Id;
     public string Name { get; } = p.Name;
-    public string Status { get; } = p.Status.ToString();
+    public string Status { get; } = NexaProcessDisplay.StatusText(p);
+    public string? StatusReason { get; } = p.StatusReason;
+    public string Url { get; } = string.IsNullOrWhiteSpace(p.Url) ? "—" : p.Url;
+    public bool HasUrl { get; } = !string.IsNullOrWhiteSpace(p.Url);
     public string Pid { get; } = p.Pid?.ToString() ?? "-";
     public int Restarts { get; } = p.Restarts;
     public string Memory { get; } = FormatMemory(p.MemoryUsage);

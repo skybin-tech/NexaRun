@@ -17,15 +17,15 @@ public static class ImportCommand
 
         var onlyOpt = new Option<string?>("--only")
         {
-            Description = "Import and start only this app name from the file"
+            Description = "Import only this app name from the file"
         };
 
-        var noStartOpt = new Option<bool>("--no-start")
+        var startOpt = new Option<bool>("--start")
         {
-            Description = "Register processes without starting them"
+            Description = "Start processes after importing them"
         };
 
-        var cmd = new Command("import", "Import processes from a JSON file") { fileArg, onlyOpt, noStartOpt };
+        var cmd = new Command("import", "Import processes from a JSON file") { fileArg, onlyOpt, startOpt };
 
         cmd.SetAction(async parseResult =>
         {
@@ -43,7 +43,7 @@ public static class ImportCommand
                 {
                     Command = "import",
                     BatchOptions = options,
-                    StartAfterImport = !parseResult.GetValue(noStartOpt)
+                    StartAfterImport = parseResult.GetValue(startOpt)
                 });
 
                 if (response.Success)

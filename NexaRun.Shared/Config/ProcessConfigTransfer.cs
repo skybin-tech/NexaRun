@@ -35,11 +35,13 @@ public static class ProcessConfigTransfer
             ErrorLogFile = p.ErrorLogFile,
             LogFile = p.LogFile,
             LogTimestamps = p.LogTimestamps,
-            Environment = p.Environment
+            Environment = p.Environment,
+            Url = p.Url
         };
 
-    public static StartOptions ToStartOptions(ProcessDefinition def) =>
-        new()
+    public static StartOptions ToStartOptions(ProcessDefinition def)
+    {
+        var options = new StartOptions
         {
             Name = def.Name,
             ExecutablePath = def.Script,
@@ -53,8 +55,12 @@ public static class ProcessConfigTransfer
             ErrorLogFile = def.ErrorLogFile,
             CombinedLogFile = def.LogFile,
             LogTimestamps = def.LogTimestamps,
-            Environment = def.Environment
+            Environment = def.Environment,
+            Url = def.Url
         };
+        ProcessUrlHelper.ApplyUrl(options);
+        return options;
+    }
 
     public static List<StartOptions> FromImportFile(string path, string? onlyApp = null)
     {

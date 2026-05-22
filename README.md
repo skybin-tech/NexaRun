@@ -53,7 +53,8 @@ Click the NexaRun icon in the system tray to get started. Right-click for the me
 
 | Menu item | Action |
 |---|---|
-| **Import JSON…** | Pick a `.json` file (defaults to `nexarun-processes.json` if present) |
+| **Import JSON…** | Pick a `.json` file and register processes (does not start them; use Start in Processes) |
+| **Settings…** | Recovery interval, AWS SES email (API or SMTP), From/To addresses |
 | **Add Process → Import JSON…** | Same import from the Add Process window |
 | **Export JSON…** | Save definitions for another machine |
 | **Processes window** | **Import JSON** / **Export JSON** toolbar buttons (same as tray) |
@@ -61,10 +62,15 @@ Click the NexaRun icon in the system tray to get started. Right-click for the me
 
 ### Processes Window
 
-Right-click tray → **Processes** to see all running processes. Select a process to use the action buttons:
+Right-click tray → **Processes** to see all running processes. The list auto-refreshes every 45 seconds and keeps your selection. Select a process to use the action buttons:
 
 | Button | Action |
 |---|---|
+| **Stop All** | Stop every running process |
+| **Restart All** | Restart every process in the list one by one (no row selection required) |
+| **Clear All** | Stop running apps, remove every entry, and save an empty process list |
+| **Settings** | Recovery interval, enable/disable recovery, AWS SES email alerts |
+| **Open URL** | Open the process URL in your browser (if configured) |
 | **Stop** | Gracefully stop the process |
 | **Restart** | Stop and start again |
 | **Logs** | View live output from the process |
@@ -73,7 +79,7 @@ Right-click tray → **Processes** to see all running processes. Select a proces
 
 ### Dashboard
 
-Right-click tray → **Dashboard** to see a 7-day history for any process — uptime bar chart, run history grid, and a **Logs** tab (same window). Use **↻ Refresh** for a full reload; background updates refresh the process list every 30 seconds only.
+Right-click tray → **Dashboard** to see a 7-day history for any process — uptime bar chart, run history grid, and a **Logs** tab (same window). **Restart** and **Logs** buttons in the stats bar restart the selected process or open the log viewer window. Use **↻ Refresh** for a full reload; background updates refresh the process list every 45 seconds only.
 
 Tray crashes are written to **Event Viewer** (Application → **NexaRun-Tray**) and `%APPDATA%\NexaRun\logs\tray-crash.log`.
 
@@ -146,13 +152,13 @@ nexarun import <file.json> [options]
 
 | Option | Description |
 |--------|-------------|
-| `--only <name>` | Import and start only this app name |
-| `--no-start` | Register only; do not start processes |
+| `--only <name>` | Import only this app name |
+| `--start` | Start processes after importing them |
 
 ```powershell
 nexarun import nexarun-processes.json
 nexarun import C:\deploy\processes.json --only api
-nexarun import nexarun-processes.json --no-start
+nexarun import nexarun-processes.json --start
 ```
 
 ### `nexarun list`
@@ -224,7 +230,7 @@ More detail: **[CLI-GUIDE.md](CLI-GUIDE.md)**
 
 ## Process JSON (`nexarun-processes.json`)
 
-Import/export uses **JSON only** (no `.js` ecosystem files). Example in the repo root: `nexarun-processes.json`.
+Import/export uses **JSON only** (`nexarun-processes.json`). Example in the repo root.
 
 ```json
 {
@@ -260,6 +266,7 @@ Import/export uses **JSON only** (no `.js` ecosystem files). Example in the repo
 | `outLogFile` / `errorLogFile` / `logFile` | Log paths |
 | `logTimestamps` | Timestamp each log line |
 | `environment` | Env vars (object) |
+| `url` | Optional link opened via **Open URL** in the Processes window |
 
 ---
 
@@ -267,7 +274,7 @@ Import/export uses **JSON only** (no `.js` ecosystem files). Example in the repo
 
 Process definitions and logs are stored under `%APPDATA%\NexaRun\` (`processes.json`, `history.json`, `logs\`). Legacy `%USERPROFILE%\.nexarun\` data is migrated automatically on first run.
 
-By default, output is saved to `%APPDATA%\NexaRun\logs\<name>.log`. Configure log paths in the JSON file or with `--out` / `--error` / `--log` on `nexarun start`. Log files rotate at 10 MB (`.log.1` backup). Use `logTimestamps` or `--time` for timestamp prefixes.
+By default, output is saved to `%APPDATA%\NexaRun\logs\<name>.log`. Configure log paths in the JSON file or with `--out` / `--error` / `--log` on `nexarun start`. If you set separate `outLogFile` and `errorLogFile`, NexaRun also writes daemon events to `<name>.log` in the same folder (not the same file as `outLogFile`). Log files rotate at 10 MB (`.log.1` backup). Use `logTimestamps` or `--time` for timestamp prefixes.
 
 ---
 
@@ -275,7 +282,11 @@ By default, output is saved to `%APPDATA%\NexaRun\logs\<name>.log`. Configure lo
 
 Crashed processes restart automatically with exponential backoff (1s, 2s, 4s, 8s, up to 30s max) so a tight crash loop doesn't hammer the system. By default NexaRun retries **3 times**; after that the process is marked errored until you start it again. Override with `--max-restarts` on the CLI. If a process stays up for 30 seconds, the restart counter resets.
 
-If you set a CPU or memory limit, NexaRun will also restart the process when it exceeds the limit. The reason is logged to the process log file.
+If you set a **per-process** CPU or memory limit, NexaRun restarts that process when it exceeds its own limit (not a total across all apps). If it cannot recover, status becomes **Errored** with a reason in the Processes/Dashboard UI, `nexarun list`, and the process log (`<name>.log` under your log folder).
+
+In **Settings**, configure failed-process recovery (default every **10 minutes**, minimum 10) and optional **AWS SES email alerts** when a process goes from Online to Errored. Choose **SES API** (IAM access key) or **SES SMTP** (SMTP credentials from the SES console). Set **From** (verified SES sender) and **To** (alert recipient), plus AWS region. Credentials are stored in `%APPDATA%\NexaRun\settings.json` on the host (restrict file permissions on shared machines).
+
+When recovery is enabled, the daemon tries **one** start for each **Errored** process per interval (crash restart counter resets for that attempt).
 
 ---
 

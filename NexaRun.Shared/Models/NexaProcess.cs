@@ -10,6 +10,8 @@ public class NexaProcess
     public string Arguments { get; set; } = string.Empty;
     public string WorkingDirectory { get; set; } = string.Empty;
     public ProcessStatus Status { get; set; }
+    /// <summary>Why the process is Errored (crash limit, per-process CPU/memory limit, launch failure).</summary>
+    public string? StatusReason { get; set; }
     public int? Pid { get; set; }
     public DateTime StartedAt { get; set; }
     public int Restarts { get; set; }
@@ -24,4 +26,6 @@ public class NexaProcess
     public Dictionary<string, string>? Environment { get; set; }
     public double? MaxCpuPercent { get; set; }
     public long? MaxMemoryMb { get; set; }
+    /// <summary>Optional URL opened from the Processes window (e.g. http://localhost:3001).</summary>
+    public string? Url { get; set; }
 }

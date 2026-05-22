@@ -1,5 +1,16 @@
 # Changelog
 
+## [2026-05-22] — v1.0.6
+
+### Added
+- **Settings** window: configurable failed-process recovery interval (min 10 min), enable/disable recovery, **AWS SES** email when a process goes Online → Errored
+- Daemon **`restart-all`** — restart every process one by one without selecting a row in the tray
+
+### Changed
+- Import no longer auto-starts processes (use **Start** or `nexarun import --start`)
+- **Restart All** uses daemon `restart-all`; no row selection required
+- Recovery check interval and email alerts read from `%APPDATA%\NexaRun\settings.json`
+
 ## [2026-05-21] — v1.0.5
 
 ### Added

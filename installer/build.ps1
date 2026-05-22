@@ -9,7 +9,7 @@
 #   - Inno Setup 6 or 7 (ISCC.exe on PATH, or default install folder)
 
 param(
-    [string]$Version = "1.0.5",
+    [string]$Version = "1.0.6",
     [string]$OutDir  = "$PSScriptRoot\output"
 )
 
@@ -35,11 +35,32 @@ if ($LASTEXITCODE -ne 0) { throw "dotnet clean failed" }
 if (Test-Path $PubDir) { Remove-Item $PubDir -Recurse -Force }
 New-Item $PubDir -ItemType Directory | Out-Null
 
+$svc = Get-Service -Name NexaRunDaemon -ErrorAction SilentlyContinue
+if ($svc -and $svc.Status -eq 'Running') {
+    Write-Host "==> Stopping NexaRunDaemon service (unlocks build output)..." -ForegroundColor Yellow
+    Stop-Service NexaRunDaemon -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 2
+}
+
 Write-Host "==> Restoring + building solution (Release)..." -ForegroundColor Yellow
-dotnet restore "$Root\NexaRun.slnx"
-if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed" }
-dotnet build "$Root\NexaRun.slnx" -c Release
-if ($LASTEXITCODE -ne 0) { throw "dotnet build failed" }
+$BuildProps = @(
+    "/p:WarningsNotAsErrors=NU1903",
+    "/p:NuGetAuditLevel=critical"
+)
+dotnet restore "$Root\NexaRun.slnx" @BuildProps
+if ($LASTEXITCODE -ne 0) {
+    throw "dotnet restore failed (exit $LASTEXITCODE). If you see NU1903, pull latest NexaRun/Directory.Build.props."
+}
+dotnet build "$Root\NexaRun.slnx" -c Release --no-restore @BuildProps
+if ($LASTEXITCODE -ne 0) {
+    throw @"
+dotnet build failed (exit $LASTEXITCODE).
+Typical causes:
+  - NexaRun tray or daemon still running (close tray; stop NexaRunDaemon service)
+  - NU1903 NuGet audit on Tmds.DBus.Protocol — update NexaRun/Directory.Build.props
+  Re-run: dotnet build $Root\NexaRun.slnx -c Release
+"@
+}
 
 $PublishArgs = @(
     "--configuration", "Release",

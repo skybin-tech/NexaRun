@@ -66,11 +66,15 @@ public class IpcServer(ProcessManager processManager, ILogger<IpcServer> logger)
                 "update" when request.Options != null => await HandleUpdate(request.Options),
                 "stop" => await HandleStop(request.ProcessName),
                 "restart" => await HandleRestart(request.ProcessName),
+                "restart-all" => await HandleRestartAll(),
                 "delete" => await HandleDelete(request.ProcessName),
+                "clear-all" => await HandleClearAll(),
                 "list" => await HandleList(),
                 "logs" => await HandleLogs(request.ProcessName, request.LogLines ?? 50, request.LogStream),
                 "history" => await HandleHistory(request.ProcessName),
                 "import" when request.BatchOptions != null => await HandleImport(request.BatchOptions, request.StartAfterImport),
+                "get-settings" => await HandleGetSettings(),
+                "set-settings" when request.Settings != null => await HandleSetSettings(request.Settings),
                 _ => new IpcResponse { Success = false, Message = $"Unknown command: {request.Command}" }
             };
         }
@@ -113,12 +117,25 @@ public class IpcServer(ProcessManager processManager, ILogger<IpcServer> logger)
         };
     }
 
+    private async Task<IpcResponse> HandleRestartAll()
+    {
+        var (success, message) = await processManager.RestartAllProcesses();
+        var processes = await processManager.GetAll();
+        return new IpcResponse { Success = success, Message = message, Processes = processes };
+    }
+
     private async Task<IpcResponse> HandleDelete(string? name)
     {
         if (string.IsNullOrWhiteSpace(name))
             return new IpcResponse { Success = false, Message = "Process name required." };
         var (success, message) = await processManager.Delete(name);
         return new IpcResponse { Success = success, Message = message };
+    }
+
+    private async Task<IpcResponse> HandleClearAll()
+    {
+        var (success, message, _) = await processManager.ClearAll();
+        return new IpcResponse { Success = success, Message = message, Processes = [] };
     }
 
     private async Task<IpcResponse> HandleList()
@@ -159,6 +176,18 @@ public class IpcServer(ProcessManager processManager, ILogger<IpcServer> logger)
     {
         var (success, message) = await processManager.ImportBatch(options, start);
         return new IpcResponse { Success = success, Message = message };
+    }
+
+    private async Task<IpcResponse> HandleGetSettings()
+    {
+        var settings = await processManager.GetSettings();
+        return new IpcResponse { Success = true, Settings = settings };
+    }
+
+    private async Task<IpcResponse> HandleSetSettings(NexaRun.Shared.Config.NexaRunSettings settings)
+    {
+        var (success, message) = await processManager.SaveSettings(settings);
+        return new IpcResponse { Success = success, Message = message, Settings = settings };
     }
 
     private async Task<IpcResponse> HandleHistory(string? name)

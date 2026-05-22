@@ -17,4 +17,5 @@ public class StartOptions
     public string? CombinedLogFile { get; set; }
     public bool LogTimestamps { get; set; }
     public Dictionary<string, string>? Environment { get; set; }
+    public string? Url { get; set; }
 }

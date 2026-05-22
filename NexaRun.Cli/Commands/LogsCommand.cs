@@ -22,17 +22,17 @@ public static class LogsCommand
 
         var outOpt = new Option<bool>("--out")
         {
-            Description = "Show stdout log only (PM2 out_file)"
+            Description = "Show stdout log only (outLogFile)"
         };
 
         var errOpt = new Option<bool>("--err")
         {
-            Description = "Show stderr log only (PM2 error_file)"
+            Description = "Show stderr log only (errorLogFile)"
         };
 
         var followOpt = new Option<bool>("--follow")
         {
-            Description = "Stream logs continuously (PM2 logs --follow)"
+            Description = "Stream logs continuously (tail -f style)"
         };
 
         var cmd = new Command("logs", "Show process logs") { nameArg, linesOpt, outOpt, errOpt, followOpt };

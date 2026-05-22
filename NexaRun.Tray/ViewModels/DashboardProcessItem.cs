@@ -1,4 +1,5 @@
 using Avalonia.Media;
+using NexaRun.Shared;
 using NexaRun.Shared.Models;
 
 namespace NexaRun.Tray.ViewModels;
@@ -6,7 +7,8 @@ namespace NexaRun.Tray.ViewModels;
 public class DashboardProcessItem(NexaProcess p)
 {
     public string Name { get; } = p.Name;
-    public string StatusLabel { get; } = p.Status.ToString();
+    public string StatusLabel { get; } = NexaProcessDisplay.ShortStatusText(p);
+    public string? StatusReason { get; } = p.StatusReason;
     public string StatusColor { get; } = p.Status switch
     {
         ProcessStatus.Online   => "#22c55e",
@@ -22,5 +24,6 @@ public class DashboardProcessItem(NexaProcess p)
         : "—";
     public string Pid { get; } = p.Pid?.ToString() ?? "—";
     public int Restarts { get; } = p.Restarts;
+    public bool HasUrl { get; } = !string.IsNullOrWhiteSpace(p.Url);
     public NexaProcess Source { get; } = p;
 }

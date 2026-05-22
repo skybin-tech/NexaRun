@@ -12,6 +12,8 @@ public static class NexaRunPaths
 
     public static string HistoryFile { get; } = Path.Combine(DataDir, "history.json");
 
+    public static string SettingsFile { get; } = Path.Combine(DataDir, "settings.json");
+
     public static string DaemonLogFile { get; } = Path.Combine(LogDir, "nexarun-daemon.log");
 
     public static string DefaultProcessLogFile(string processName) =>

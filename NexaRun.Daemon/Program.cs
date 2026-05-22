@@ -17,6 +17,7 @@ try
     builder.Services.AddWindowsService(options => options.ServiceName = "NexaRun Daemon");
     builder.Services.AddSystemd();
     builder.Services.AddSerilog();
+    builder.Services.AddSingleton<ProcessAlertService>();
     builder.Services.AddSingleton<ProcessManager>();
     builder.Services.AddHostedService<DaemonWorker>();
     builder.Services.AddHostedService<IpcServer>();

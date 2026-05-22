@@ -1,3 +1,5 @@
+using NexaRun.Shared.Config;
+
 namespace NexaRun.Shared.Models;
 
 public class IpcResponse
@@ -7,4 +9,5 @@ public class IpcResponse
     public List<NexaProcess>? Processes { get; set; }
     public string? Logs { get; set; }
     public List<ProcessRun>? RunHistory { get; set; }
+    public NexaRunSettings? Settings { get; set; }
 }

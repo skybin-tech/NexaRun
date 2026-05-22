@@ -5,7 +5,10 @@ namespace NexaRun.Daemon;
 public sealed class ProcessLogSession : IDisposable
 {
     private readonly bool _timestamps;
-    private readonly Dictionary<string, StreamWriter> _writers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, StreamWriter> _writersByPath = new(StringComparer.OrdinalIgnoreCase);
+    private readonly string? _combinedPath;
+    private readonly string? _outPath;
+    private readonly string? _errPath;
 
     public ProcessLogSession(
         string? combinedPath,
@@ -14,40 +17,59 @@ public sealed class ProcessLogSession : IDisposable
         bool timestamps)
     {
         _timestamps = timestamps;
+        _combinedPath = NormalizePath(combinedPath);
+        _outPath = NormalizePath(outPath);
+        _errPath = NormalizePath(errPath);
 
-        if (!string.IsNullOrWhiteSpace(combinedPath))
-            _writers["combined"] = OpenWriter(combinedPath);
-
-        if (!string.IsNullOrWhiteSpace(outPath))
-            _writers["out"] = OpenWriter(outPath);
-
-        if (!string.IsNullOrWhiteSpace(errPath))
-            _writers["err"] = OpenWriter(errPath);
+        TryOpen(_combinedPath);
+        TryOpen(_outPath);
+        TryOpen(_errPath);
     }
 
     public void WriteStdout(string line)
     {
-        Write("combined", line);
-        Write("out", line);
+        WriteToPath(_combinedPath, line);
+        if (!PathsEqual(_combinedPath, _outPath))
+            WriteToPath(_outPath, line);
     }
 
     public void WriteStderr(string line)
     {
-        Write("combined", $"ERR {line}");
-        Write("err", line);
+        WriteToPath(_combinedPath, $"ERR {line}");
+        if (!PathsEqual(_errPath, _combinedPath))
+            WriteToPath(_errPath, line);
     }
 
-    public void WriteSystem(string line)
+    public void WriteSystem(string line) => WriteToPath(_combinedPath, line);
+
+    private void WriteToPath(string? path, string line)
     {
-        Write("combined", line);
+        if (path == null) return;
+        if (!_writersByPath.TryGetValue(path, out var writer)) return;
+
+        try
+        {
+            var text = _timestamps ? $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}: {line}" : line;
+            writer.WriteLine(text);
+        }
+        catch (IOException)
+        {
+            // Avoid crashing output handlers if the file is temporarily locked.
+        }
     }
 
-    private void Write(string key, string line)
+    private void TryOpen(string? path)
     {
-        if (!_writers.TryGetValue(key, out var writer)) return;
+        if (path == null || _writersByPath.ContainsKey(path)) return;
 
-        var text = _timestamps ? $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}: {line}" : line;
-        writer.WriteLine(text);
+        try
+        {
+            _writersByPath[path] = OpenWriter(path);
+        }
+        catch (Exception ex)
+        {
+            throw new IOException($"Cannot open log file '{path}': {ex.Message}", ex);
+        }
     }
 
     private static StreamWriter OpenWriter(string path)
@@ -81,10 +103,16 @@ public sealed class ProcessLogSession : IDisposable
         }
     }
 
+    private static string? NormalizePath(string? path) =>
+        string.IsNullOrWhiteSpace(path) ? null : Path.GetFullPath(path);
+
+    private static bool PathsEqual(string? a, string? b) =>
+        a != null && b != null && string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+
     public void Dispose()
     {
-        foreach (var w in _writers.Values)
+        foreach (var w in _writersByPath.Values)
             w.Dispose();
-        _writers.Clear();
+        _writersByPath.Clear();
     }
 }

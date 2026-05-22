@@ -13,10 +13,11 @@ public partial class DashboardWindow : Window
     private string? _selectedName;
 
     private TextBlock _statusText = null!;
-    private Button _refreshBtn = null!;
+    private Button _refreshBtn = null!, _restartBtn = null!, _openUrlBtn = null!, _logsBtn = null!;
     private ListBox _processList = null!;
     private Border _statsBar = null!;
-    private TextBlock _detailStatus = null!, _detailPid = null!, _detailMemory = null!, _detailRestarts = null!;
+    private TextBlock _detailStatus = null!, _detailReason = null!;
+    private TextBlock _detailPid = null!, _detailMemory = null!, _detailRestarts = null!;
     private DockPanel _historyPanel = null!;
     private TextBlock _historyTitle = null!;
     private ItemsControl _uptimeBars = null!;
@@ -35,7 +36,7 @@ public partial class DashboardWindow : Window
     private enum DetailView { History, Logs }
     private DetailView _detailView = DetailView.History;
 
-    private static readonly TimeSpan ListRefreshInterval = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan ListRefreshInterval = TimeSpan.FromSeconds(45);
     private static readonly TimeSpan LogsLiveInterval = TimeSpan.FromSeconds(8);
 
     public DashboardWindow(IpcClient ipc)
@@ -45,9 +46,13 @@ public partial class DashboardWindow : Window
 
         _statusText    = this.FindControl<TextBlock>("StatusText")!;
         _refreshBtn    = this.FindControl<Button>("RefreshBtn")!;
+        _restartBtn    = this.FindControl<Button>("RestartBtn")!;
+        _openUrlBtn    = this.FindControl<Button>("OpenUrlBtn")!;
+        _logsBtn       = this.FindControl<Button>("LogsBtn")!;
         _processList   = this.FindControl<ListBox>("ProcessList")!;
         _statsBar      = this.FindControl<Border>("StatsBar")!;
         _detailStatus  = this.FindControl<TextBlock>("DetailStatus")!;
+        _detailReason  = this.FindControl<TextBlock>("DetailReason")!;
         _detailPid     = this.FindControl<TextBlock>("DetailPid")!;
         _detailMemory  = this.FindControl<TextBlock>("DetailMemory")!;
         _detailRestarts = this.FindControl<TextBlock>("DetailRestarts")!;
@@ -73,6 +78,9 @@ public partial class DashboardWindow : Window
     private void WireEvents()
     {
         _refreshBtn.Click += async (_, _) => await RefreshAll();
+        _restartBtn.Click += async (_, _) => await RestartSelected();
+        _openUrlBtn.Click += (_, _) => OpenSelectedUrl();
+        _logsBtn.Click += (_, _) => OpenLogsWindow();
         _historyTabBtn.Click += async (_, _) => await ShowHistoryTab();
         _logsTabBtn.Click += async (_, _) => await ShowLogsTab();
         _logsRefreshBtn.Click += async (_, _) => await RefreshLogs();
@@ -140,9 +148,23 @@ public partial class DashboardWindow : Window
 
         _detailStatus.Text = item.StatusLabel;
         _detailStatus.Foreground = Avalonia.Media.SolidColorBrush.Parse(item.StatusColor);
+        var reason = item.StatusReason;
+        _detailReason.Text = reason ?? string.Empty;
+        _detailReason.IsVisible = !string.IsNullOrWhiteSpace(reason);
         _detailPid.Text = item.Pid;
         _detailMemory.Text = item.Memory;
         _detailRestarts.Text = item.Restarts.ToString();
+        SetActionButtonsEnabled(item);
+    }
+
+    private void OpenSelectedUrl()
+    {
+        var item = FindSelectedItem();
+        var url = item?.Source.Url;
+        if (!BrowserHelper.TryOpen(url))
+            _statusText.Text = string.IsNullOrWhiteSpace(url)
+                ? "No URL configured for this process."
+                : $"⚠ Invalid URL: {url}";
     }
 
     private async Task RefreshProcesses()
@@ -172,6 +194,7 @@ public partial class DashboardWindow : Window
         UpdateSelectedStats();
         _statsBar.IsVisible  = true;
         _emptyText.IsVisible = false;
+        SetActionButtonsEnabled(item);
 
         // Fetch run history
         var resp = await _ipc.Send(new IpcRequest { Command = "history", ProcessName = item.Name });
@@ -199,6 +222,51 @@ public partial class DashboardWindow : Window
         _historyPanel.IsVisible = false;
         _logsPanel.IsVisible    = false;
         _emptyText.IsVisible    = true;
+        _detailReason.IsVisible = false;
+        SetActionButtonsEnabled(null);
+    }
+
+    private void SetActionButtonsEnabled(DashboardProcessItem? item)
+    {
+        var has = item != null;
+        _restartBtn.IsEnabled = has;
+        _logsBtn.IsEnabled = has;
+        _openUrlBtn.IsEnabled = has && item!.HasUrl;
+    }
+
+    private async Task RestartSelected()
+    {
+        if (string.IsNullOrEmpty(_selectedName)) return;
+
+        _restartBtn.IsEnabled = false;
+        _statusText.Text = $"Restarting {_selectedName}…";
+        try
+        {
+            var response = await _ipc.Send(new IpcRequest
+            {
+                Command = "restart",
+                ProcessName = _selectedName
+            });
+
+            if (!response.Success)
+            {
+                _statusText.Text = $"⚠ {response.Message}";
+                return;
+            }
+
+            _statusText.Text = $"Restarted {_selectedName}.";
+            await RefreshAll();
+        }
+        finally
+        {
+            SetActionButtonsEnabled(FindSelectedItem());
+        }
+    }
+
+    private void OpenLogsWindow()
+    {
+        if (string.IsNullOrEmpty(_selectedName)) return;
+        new LogsWindow(_ipc, _selectedName).Show();
     }
 
     private async Task ShowHistoryTab()

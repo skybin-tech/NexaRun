@@ -12,7 +12,7 @@ public partial class AddProcessWindow : Window
     private readonly TrayConfigService _config;
     private readonly bool _isEdit;
 
-    private TextBox _nameBox = null!, _execBox = null!, _argsBox = null!, _cwdBox = null!, _maxCpuBox = null!, _maxMemBox = null!;
+    private TextBox _nameBox = null!, _execBox = null!, _argsBox = null!, _cwdBox = null!, _maxCpuBox = null!, _maxMemBox = null!, _urlBox = null!;
     private CheckBox _autoRestartBox = null!;
     private Button _startBtn = null!, _cancelBtn = null!, _importJsonBtn = null!, _browseBtn = null!, _browseCwdBtn = null!;
     private TextBlock _errorText = null!;
@@ -30,6 +30,7 @@ public partial class AddProcessWindow : Window
         _cwdBox        = this.FindControl<TextBox>("CwdBox")!;
         _maxCpuBox     = this.FindControl<TextBox>("MaxCpuBox")!;
         _maxMemBox     = this.FindControl<TextBox>("MaxMemBox")!;
+        _urlBox        = this.FindControl<TextBox>("UrlBox")!;
         _autoRestartBox= this.FindControl<CheckBox>("AutoRestartBox")!;
         _startBtn      = this.FindControl<Button>("StartBtn")!;
         _cancelBtn     = this.FindControl<Button>("CancelBtn")!;
@@ -51,6 +52,7 @@ public partial class AddProcessWindow : Window
             _autoRestartBox.IsChecked = existing.AutoRestart;
             _maxCpuBox.Text = existing.MaxCpuPercent?.ToString() ?? string.Empty;
             _maxMemBox.Text = existing.MaxMemoryMb?.ToString() ?? string.Empty;
+            _urlBox.Text = existing.Url ?? string.Empty;
         }
 
         WireEvents();
@@ -95,7 +97,8 @@ public partial class AddProcessWindow : Window
                 WorkingDirectory = _cwdBox.Text?.Trim() ?? string.Empty,
                 AutoRestart = _autoRestartBox.IsChecked ?? true,
                 MaxCpuPercent = maxCpu,
-                MaxMemoryMb = maxMem
+                MaxMemoryMb = maxMem,
+                Url = string.IsNullOrWhiteSpace(_urlBox.Text) ? null : _urlBox.Text.Trim()
             }
         });
 

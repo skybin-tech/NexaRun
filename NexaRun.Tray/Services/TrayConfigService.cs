@@ -6,7 +6,7 @@ namespace NexaRun.Tray.Services;
 
 public class TrayConfigService(IpcClient ipc)
 {
-    public async Task<(bool success, string message)> ImportJsonFile(string path, bool start = true)
+    public async Task<(bool success, string message)> ImportJsonFile(string path, bool start = false)
     {
         var options = ProcessConfigTransfer.FromImportFile(path);
         return await SendImport(options, start);

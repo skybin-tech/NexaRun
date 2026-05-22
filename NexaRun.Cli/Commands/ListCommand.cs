@@ -10,7 +10,7 @@ public static class ListCommand
 {
     public static Command Build(IpcClient client)
     {
-        var cmd = new Command("list", "List all managed processes (pm2 list)");
+        var cmd = new Command("list", "List all managed processes and error reasons");
 
         cmd.SetAction(async parseResult =>
         {

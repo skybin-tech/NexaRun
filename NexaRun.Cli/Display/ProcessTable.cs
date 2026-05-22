@@ -1,3 +1,4 @@
+using NexaRun.Shared;
 using NexaRun.Shared.Models;
 using Spectre.Console;
 
@@ -18,6 +19,7 @@ public static class ProcessTable
             .AddColumn("[bold]Id[/]")
             .AddColumn("[bold]Name[/]")
             .AddColumn("[bold]Status[/]")
+            .AddColumn("[bold]Reason[/]")
             .AddColumn("[bold]Pid[/]")
             .AddColumn("[bold]Restarts[/]")
             .AddColumn("[bold]Memory[/]")
@@ -35,6 +37,10 @@ public static class ProcessTable
                 _ => p.Status.ToString()
             };
 
+            var reason = p.Status == ProcessStatus.Errored && !string.IsNullOrWhiteSpace(p.StatusReason)
+                ? Markup.Escape(p.StatusReason)
+                : "-";
+
             var pid = p.Pid?.ToString() ?? "-";
             var memory = p.Status == ProcessStatus.Online ? FormatMemory(p.MemoryUsage) : "-";
             var uptime = p.Status == ProcessStatus.Online ? FormatUptime(p.StartedAt) : "-";
@@ -43,6 +49,7 @@ public static class ProcessTable
                 p.Id.ToString(),
                 Markup.Escape(p.Name),
                 statusMarkup,
+                reason,
                 pid,
                 p.Restarts.ToString(),
                 memory,

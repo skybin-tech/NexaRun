@@ -12,9 +12,12 @@ public class DaemonWorker(ProcessManager processManager, ILogger<DaemonWorker> l
         {
             try
             {
+                await processManager.ReloadSettings();
                 await processManager.UpdateStats();
+                await processManager.CheckDownAlerts();
                 await processManager.CheckAndRestartCrashed();
                 await processManager.CheckResourceLimits();
+                await processManager.CheckAndRecoverFailed();
             }
             catch (Exception ex)
             {

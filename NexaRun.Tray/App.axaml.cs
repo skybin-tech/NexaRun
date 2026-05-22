@@ -49,6 +49,7 @@ public class App : Application
         AddMenuItem(menu, "Add Process", (_, _) => ShowAddProcess());
         AddMenuItem(menu, "Import JSON...", async (_, _) => await ImportJson());
         AddMenuItem(menu, "Export JSON...", async (_, _) => await ExportJson());
+        AddMenuItem(menu, "Settings...", (_, _) => ShowSettings());
 
         menu.Items.Add(new NativeMenuItemSeparator());
         AddMenuItem(menu, "Open data folder", (_, _) => OpenDataFolder());
@@ -126,6 +127,11 @@ public class App : Application
     private void ShowAddProcess()
     {
         new AddProcessWindow(_ipc).Show();
+    }
+
+    private void ShowSettings()
+    {
+        new SettingsWindow(_ipc).Show();
     }
 
     private static WindowIcon CreateIcon()

@@ -1,3 +1,5 @@
+using NexaRun.Shared.Config;
+
 namespace NexaRun.Shared.Models;
 
 public class IpcRequest
@@ -8,5 +10,6 @@ public class IpcRequest
     public int? LogLines { get; set; }
     public string? LogStream { get; set; }
     public List<StartOptions>? BatchOptions { get; set; }
-    public bool StartAfterImport { get; set; } = true;
+    public bool StartAfterImport { get; set; }
+    public NexaRunSettings? Settings { get; set; }
 }
