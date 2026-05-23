@@ -2,6 +2,9 @@
 
 ## [2026-05-23] — v1.0.7
 
+### Changed
+- `NexaRun.Daemon` — bump `AWSSDK.SimpleEmail` from 3.7.401 to 4.0.2.31
+
 ### Added
 - `NexaRun.Shared/ProcessTarget` — PM2-style id-or-name resolution; all CLI commands and daemon handlers now accept a numeric id (from `nexarun list`) or a name string
 - `NexaRun.Cli/CliCommands` — shared `TargetArgument` and `TargetRequest` helpers used by stop, restart, delete, logs, and start commands
