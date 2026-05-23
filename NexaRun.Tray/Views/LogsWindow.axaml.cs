@@ -7,8 +7,8 @@ namespace NexaRun.Tray.Views;
 
 public partial class LogsWindow : Window
 {
-    private readonly IpcClient _ipc;
-    private readonly string _processName;
+    private IpcClient _ipc = null!;
+    private string _processName = "";
     private DispatcherTimer? _timer;
 
     private TextBlock _titleText = null!;
@@ -17,11 +17,15 @@ public partial class LogsWindow : Window
     private ScrollViewer _scroller = null!;
     private TextBox _logBox = null!;
 
-    public LogsWindow(IpcClient ipc, string processName)
+    public LogsWindow()
+    {
+        InitializeComponent();
+    }
+
+    public LogsWindow(IpcClient ipc, string processName) : this()
     {
         _ipc = ipc;
         _processName = processName;
-        InitializeComponent();
 
         _titleText    = this.FindControl<TextBlock>("TitleText")!;
         _refreshBtn   = this.FindControl<Button>("RefreshBtn")!;

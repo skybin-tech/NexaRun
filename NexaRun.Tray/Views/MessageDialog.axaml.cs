@@ -4,9 +4,13 @@ namespace NexaRun.Tray.Views;
 
 public partial class MessageDialog : Window
 {
-    public MessageDialog(string heading, string body)
+    public MessageDialog()
     {
         InitializeComponent();
+    }
+
+    public MessageDialog(string heading, string body) : this()
+    {
         Title = heading;
         this.FindControl<TextBlock>("HeadingText")!.Text = heading;
         this.FindControl<TextBlock>("BodyText")!.Text = body;

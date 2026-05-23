@@ -33,6 +33,7 @@
 
     <!-- Process grid -->
     <DataGrid x:Name="ProcessGrid"
+              x:CompileBindings="False"
               AutoGenerateColumns="False"
               IsReadOnly="True"
               SelectionMode="Single"

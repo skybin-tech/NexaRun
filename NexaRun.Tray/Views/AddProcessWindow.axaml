@@ -10,33 +10,33 @@
   <StackPanel Margin="20" Spacing="10">
 
     <TextBlock Text="Name" />
-    <TextBox x:Name="NameBox" Watermark="e.g. myapi" />
+    <TextBox x:Name="NameBox" PlaceholderText="e.g. myapi" />
 
     <TextBlock Text="Executable" />
     <Grid ColumnDefinitions="*,Auto">
-      <TextBox x:Name="ExecBox" Watermark="dotnet, node, ./app.exe …" />
+      <TextBox x:Name="ExecBox" PlaceholderText="dotnet, node, ./app.exe …" />
       <Button Grid.Column="1" x:Name="BrowseBtn" Content="…" Margin="6 0 0 0" />
     </Grid>
 
     <TextBlock Text="Arguments (optional)" />
-    <TextBox x:Name="ArgsBox" Watermark="run --project ./MyApi" />
+    <TextBox x:Name="ArgsBox" PlaceholderText="run --project ./MyApi" />
 
     <TextBlock Text="Working Directory (optional)" />
     <Grid ColumnDefinitions="*,Auto">
-      <TextBox x:Name="CwdBox" Watermark="Defaults to current directory" />
+      <TextBox x:Name="CwdBox" PlaceholderText="Defaults to current directory" />
       <Button Grid.Column="1" x:Name="BrowseCwdBtn" Content="…" Margin="6 0 0 0" />
     </Grid>
 
     <CheckBox x:Name="AutoRestartBox" Content="Auto-restart on crash" IsChecked="True" Margin="0 4 0 0" />
 
     <TextBlock Text="Max CPU % (optional — restart above this)" />
-    <TextBox x:Name="MaxCpuBox" Watermark="e.g. 80" />
+    <TextBox x:Name="MaxCpuBox" PlaceholderText="e.g. 80" />
 
     <TextBlock Text="Max Memory MB (optional — restart above this)" />
-    <TextBox x:Name="MaxMemBox" Watermark="e.g. 512" />
+    <TextBox x:Name="MaxMemBox" PlaceholderText="e.g. 512" />
 
     <TextBlock Text="URL (optional — open in browser from Processes window)" />
-    <TextBox x:Name="UrlBox" Watermark="e.g. http://localhost:3001" />
+    <TextBox x:Name="UrlBox" PlaceholderText="e.g. http://localhost:3001" />
 
     <TextBlock x:Name="ErrorText" Foreground="Salmon" FontSize="12" IsVisible="False" />
 

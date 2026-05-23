@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-05-23
+- **NexaRun.Tray:** Refactor Avalonia 12 window code-behind to typed patterns; align tray csproj packages
+
 ## [2026-05-23] — v1.0.7
 
 ### Changed

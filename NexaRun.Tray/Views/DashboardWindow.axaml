@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:NexaRun.Tray.ViewModels"
         x:Class="NexaRun.Tray.Views.DashboardWindow"
         Title="NexaRun — Dashboard"
         Width="900" Height="600"
@@ -38,7 +39,7 @@
                    Background="Transparent"
                    SelectionMode="Single">
             <ListBox.ItemTemplate>
-              <DataTemplate>
+              <DataTemplate x:DataType="vm:DashboardProcessItem">
                 <Grid ColumnDefinitions="8,*" Margin="4,2">
                   <!-- Status dot -->
                   <Ellipse Grid.Column="0" Width="8" Height="8"
@@ -160,7 +161,7 @@
                   </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
-                  <DataTemplate>
+                  <DataTemplate x:DataType="vm:UptimeDayBar">
                     <StackPanel Spacing="3" Width="80">
                       <Border Height="40" Background="#1e1e3a"
                               CornerRadius="2" ClipToBounds="True">
@@ -184,6 +185,7 @@
 
           <!-- Run history grid -->
           <DataGrid x:Name="RunGrid"
+                    x:CompileBindings="False"
                     IsReadOnly="True"
                     CanUserReorderColumns="False"
                     CanUserResizeColumns="True"

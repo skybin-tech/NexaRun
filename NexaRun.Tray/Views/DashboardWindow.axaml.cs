@@ -8,7 +8,7 @@ namespace NexaRun.Tray.Views;
 
 public partial class DashboardWindow : Window
 {
-    private readonly IpcClient _ipc;
+    private IpcClient _ipc = null!;
     private DispatcherTimer? _timer;
     private string? _selectedName;
 
@@ -39,10 +39,14 @@ public partial class DashboardWindow : Window
     private static readonly TimeSpan ListRefreshInterval = TimeSpan.FromSeconds(45);
     private static readonly TimeSpan LogsLiveInterval = TimeSpan.FromSeconds(8);
 
-    public DashboardWindow(IpcClient ipc)
+    public DashboardWindow()
+    {
+        InitializeComponent();
+    }
+
+    public DashboardWindow(IpcClient ipc) : this()
     {
         _ipc = ipc;
-        InitializeComponent();
 
         _statusText    = this.FindControl<TextBlock>("StatusText")!;
         _refreshBtn    = this.FindControl<Button>("RefreshBtn")!;

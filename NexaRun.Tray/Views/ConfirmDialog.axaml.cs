@@ -4,9 +4,13 @@ namespace NexaRun.Tray.Views;
 
 public partial class ConfirmDialog : Window
 {
-    public ConfirmDialog(string heading, string body)
+    public ConfirmDialog()
     {
         InitializeComponent();
+    }
+
+    public ConfirmDialog(string heading, string body) : this()
+    {
 
         Title = heading;
         this.FindControl<TextBlock>("HeadingText")!.Text = heading;

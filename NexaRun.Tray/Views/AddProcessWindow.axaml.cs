@@ -8,21 +8,25 @@ namespace NexaRun.Tray.Views;
 
 public partial class AddProcessWindow : Window
 {
-    private readonly IpcClient _ipc;
-    private readonly TrayConfigService _config;
-    private readonly bool _isEdit;
+    private IpcClient _ipc = null!;
+    private TrayConfigService _config = null!;
+    private bool _isEdit;
 
     private TextBox _nameBox = null!, _execBox = null!, _argsBox = null!, _cwdBox = null!, _maxCpuBox = null!, _maxMemBox = null!, _urlBox = null!;
     private CheckBox _autoRestartBox = null!;
     private Button _startBtn = null!, _cancelBtn = null!, _importJsonBtn = null!, _browseBtn = null!, _browseCwdBtn = null!;
     private TextBlock _errorText = null!;
 
-    public AddProcessWindow(IpcClient ipc, NexaProcess? existing = null)
+    public AddProcessWindow()
+    {
+        InitializeComponent();
+    }
+
+    public AddProcessWindow(IpcClient ipc, NexaProcess? existing = null) : this()
     {
         _ipc = ipc;
         _config = new TrayConfigService(ipc);
         _isEdit = existing != null;
-        InitializeComponent();
 
         _nameBox       = this.FindControl<TextBox>("NameBox")!;
         _execBox       = this.FindControl<TextBox>("ExecBox")!;

@@ -9,8 +9,8 @@ namespace NexaRun.Tray.Views;
 
 public partial class MainWindow : Window
 {
-    private readonly IpcClient _ipc;
-    private readonly TrayConfigService _config;
+    private IpcClient _ipc = null!;
+    private TrayConfigService _config = null!;
     private DispatcherTimer? _timer;
     private ProcessRow? _selected;
     private string? _selectedName;
@@ -23,11 +23,15 @@ public partial class MainWindow : Window
     private Button _stopBtn = null!, _restartBtn = null!, _logsBtn = null!, _editBtn = null!, _deleteBtn = null!;
     private TextBlock _statusText = null!;
 
-    public MainWindow(IpcClient ipc)
+    public MainWindow()
+    {
+        InitializeComponent();
+    }
+
+    public MainWindow(IpcClient ipc) : this()
     {
         _ipc = ipc;
         _config = new TrayConfigService(ipc);
-        InitializeComponent();
 
         _processGrid = this.FindControl<DataGrid>("ProcessGrid")!;
         _addBtn      = this.FindControl<Button>("AddBtn")!;

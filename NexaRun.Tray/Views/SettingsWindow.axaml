@@ -14,7 +14,7 @@
                 Content="Enable periodic recovery for Errored processes"
                 IsChecked="True" />
       <TextBlock Text="Check interval (minutes, minimum 10)" />
-      <TextBox x:Name="RecoveryIntervalBox" Watermark="10" />
+      <TextBox x:Name="RecoveryIntervalBox" PlaceholderText="10" />
 
       <Separator Margin="0 8" />
 
@@ -29,20 +29,20 @@
       </ComboBox>
 
       <TextBlock Text="From (verified SES sender)" FontWeight="SemiBold" />
-      <TextBox x:Name="EmailFromBox" Watermark="alerts@yourdomain.com" />
+      <TextBox x:Name="EmailFromBox" PlaceholderText="alerts@yourdomain.com" />
 
       <TextBlock Text="To (alert recipient)" />
-      <TextBox x:Name="EmailToBox" Watermark="you@example.com" />
+      <TextBox x:Name="EmailToBox" PlaceholderText="you@example.com" />
 
       <TextBlock Text="AWS region" Margin="0 4 0 0" />
-      <TextBox x:Name="AwsRegionBox" Watermark="us-east-1" />
+      <TextBox x:Name="AwsRegionBox" PlaceholderText="us-east-1" />
 
       <StackPanel x:Name="SesApiPanel" Spacing="8">
         <TextBlock Text="SES API credentials" FontWeight="SemiBold" Margin="0 4 0 0" />
         <TextBlock Text="IAM access key ID" />
-        <TextBox x:Name="AwsAccessKeyBox" Watermark="AKIA..." />
+        <TextBox x:Name="AwsAccessKeyBox" PlaceholderText="AKIA..." />
         <TextBlock Text="IAM secret access key" />
-        <TextBox x:Name="AwsSecretBox" PasswordChar="•" Watermark="Leave blank to keep existing" />
+        <TextBox x:Name="AwsSecretBox" PasswordChar="•" PlaceholderText="Leave blank to keep existing" />
       </StackPanel>
 
       <StackPanel x:Name="SesSmtpPanel" Spacing="8" IsVisible="False">
@@ -50,13 +50,13 @@
         <TextBlock Foreground="Gray" FontSize="11" TextWrapping="Wrap"
                    Text="Host is email-smtp.{region}.amazonaws.com (set automatically from region)." />
         <TextBlock Text="SMTP username (from SES → SMTP settings)" />
-        <TextBox x:Name="SesSmtpUserBox" Watermark="SMTP username" />
+        <TextBox x:Name="SesSmtpUserBox" PlaceholderText="SMTP username" />
         <TextBlock Text="SMTP password" />
-        <TextBox x:Name="SesSmtpPasswordBox" PasswordChar="•" Watermark="Leave blank to keep existing" />
+        <TextBox x:Name="SesSmtpPasswordBox" PasswordChar="•" PlaceholderText="Leave blank to keep existing" />
         <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
           <StackPanel Grid.Column="0">
             <TextBlock Text="SMTP port" />
-            <TextBox x:Name="SesSmtpPortBox" Watermark="587" />
+            <TextBox x:Name="SesSmtpPortBox" PlaceholderText="587" />
           </StackPanel>
           <StackPanel Grid.Column="1" VerticalAlignment="Bottom">
             <CheckBox x:Name="SesSmtpTlsBox" Content="Use TLS" IsChecked="True" />

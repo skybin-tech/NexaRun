@@ -9,7 +9,7 @@ namespace NexaRun.Tray.Views;
 
 public partial class SettingsWindow : Window
 {
-    private readonly IpcClient _ipc;
+    private IpcClient _ipc = null!;
     private NexaRunSettings? _loaded;
 
     private CheckBox _recoveryEnabledBox = null!;
@@ -24,10 +24,14 @@ public partial class SettingsWindow : Window
     private TextBlock _errorText = null!;
     private Button _saveBtn = null!, _cancelBtn = null!;
 
-    public SettingsWindow(IpcClient ipc)
+    public SettingsWindow()
+    {
+        InitializeComponent();
+    }
+
+    public SettingsWindow(IpcClient ipc) : this()
     {
         _ipc = ipc;
-        InitializeComponent();
         BindControls();
         WireEvents();
         Opened += async (_, _) => await LoadSettings();
