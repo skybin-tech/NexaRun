@@ -43,6 +43,8 @@ SetupIconFile=assets\NexaRun.ico
 UninstallDisplayIcon={app}\{#TrayExe}
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
+; Notify Windows (and new terminals) that PATH / environment changed
+ChangesEnvironment=yes
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -62,6 +64,14 @@ Source: "{#PubDir}\cli\{#CliExe}"; DestDir: "{app}\bin"; Flags: ignoreversion; D
 ; Tray app
 Source: "{#PubDir}\tray\{#TrayExe}";      DestDir: "{app}";      Flags: ignoreversion
 Source: "..\nexarun-processes.json"; DestDir: "{app}"; Flags: ignoreversion
+Source: "fix-path.ps1"; DestDir: "{app}"; Flags: ignoreversion
+
+[Registry]
+; Lets Windows resolve nexarun.exe without relying on PATH alone (Shell / some launchers)
+Root: HKLM; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\nexarun.exe"; \
+  ValueType: string; ValueName: ""; ValueData: "{app}\bin\nexarun.exe"; Flags: uninsdeletekey
+Root: HKLM; Subkey: "SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\nexarun.exe"; \
+  ValueType: string; ValueName: "Path"; ValueData: "{app}\bin"; Flags: uninsdeletekey
 
 [Icons]
 ; Start Menu
@@ -73,13 +83,6 @@ Name: "{autodesktop}\NexaRun";       Filename: "{app}\{#TrayExe}";   Tasks: desk
 
 ; Startup (optional task) — {commonstartup} matches admin install (machine-wide service)
 Name: "{commonstartup}\NexaRun Tray"; Filename: "{app}\{#TrayExe}"; Tasks: startwitwindows
-
-[Registry]
-; Add {app}\bin to system PATH so "nexarun" works in any terminal
-Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; \
-  ValueType: expandsz; ValueName: "Path"; \
-  ValueData: "{olddata};{app}\bin"; \
-  Check: NeedsAddPath(ExpandConstant('{app}\bin'))
 
 [Run]
 ; Install and start the Windows Service silently after install
@@ -100,6 +103,11 @@ Filename: "{app}\{#TrayExe}"; \
   Description: "Launch NexaRun Tray"; \
   Flags: runhidden nowait postinstall skipifsilent
 
+; Ensure system PATH + broadcast (fixes upgrades that predate PATH logic)
+Filename: "powershell.exe"; \
+  Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\fix-path.ps1"" -InstallDir ""{app}"""; \
+  Flags: runhidden waituntilterminated; StatusMsg: "Adding nexarun to PATH..."
+
 [UninstallRun]
 ; Stop and remove the Windows Service on uninstall (RunOnceId = run each entry once per uninstall)
 Filename: "sc.exe"; Parameters: "stop ""{#ServiceName}"""; \
@@ -116,45 +124,103 @@ Type: filesandordirs; Name: "{app}"
 Type: files; Name: "{commonstartup}\NexaRun Tray.lnk"
 
 [Code]
-// Checks whether a given path is already in the system PATH variable.
-function NeedsAddPath(Param: string): boolean;
+const
+  EnvironmentKey = 'SYSTEM\CurrentControlSet\Control\Session Manager\Environment';
+  WM_SETTINGCHANGE = $001A;
+  SMTO_ABORTIFHUNG = $0002;
+
+function SendMessageTimeout(hWnd: LongInt; Msg, wParam, lParam, fuFlags, uTimeout: LongWord;
+  var lpdwResult: LongWord): LongWord;
+  external 'SendMessageTimeoutW@user32.dll stdcall';
+
+procedure RefreshEnvironment();
+var
+  Dummy: LongWord;
+begin
+  SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 0, SMTO_ABORTIFHUNG, 5000, Dummy);
+end;
+
+function NormalizePath(const S: string): string;
+begin
+  Result := UpperCase(Trim(S));
+  while (Length(Result) > 0) and (Result[Length(Result)] = '\') do
+    SetLength(Result, Length(Result) - 1);
+end;
+
+function PathContainsEntry(const Path, Entry: string): Boolean;
+begin
+  Result := Pos(';' + NormalizePath(Entry) + ';', ';' + NormalizePath(Path) + ';') > 0;
+end;
+
+function NeedsAddPath(Param: string): Boolean;
 var
   OrigPath: string;
 begin
-  if not RegQueryStringValue(
-    HKEY_LOCAL_MACHINE,
-    'SYSTEM\CurrentControlSet\Control\Session Manager\Environment',
-    'Path', OrigPath)
-  then begin
+  if not RegQueryStringValue(HKEY_LOCAL_MACHINE, EnvironmentKey, 'Path', OrigPath) then
+  begin
     Result := True;
     exit;
   end;
-  Result := Pos(';' + Param + ';', ';' + OrigPath + ';') = 0;
+  Result := not PathContainsEntry(OrigPath, Param);
 end;
 
-// Remove our bin dir from PATH on uninstall.
-procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+procedure AddBinToSystemPath();
+var
+  BinPath, OrigPath, NewPath: string;
+begin
+  BinPath := ExpandConstant('{app}\bin');
+  if not NeedsAddPath(BinPath) then
+    exit;
+
+  if RegQueryStringValue(HKEY_LOCAL_MACHINE, EnvironmentKey, 'Path', OrigPath) then
+  begin
+    if OrigPath = '' then
+      NewPath := BinPath
+    else
+      NewPath := OrigPath + ';' + BinPath;
+  end
+  else
+    NewPath := BinPath;
+
+  if RegWriteExpandStringValue(HKEY_LOCAL_MACHINE, EnvironmentKey, 'Path', NewPath) then
+    RefreshEnvironment();
+end;
+
+procedure RemoveBinFromSystemPath();
 var
   OrigPath, BinPath, NewPath: string;
   P: Integer;
 begin
-  if CurUninstallStep <> usPostUninstall then exit;
-
   BinPath := ExpandConstant('{app}\bin');
-  if not RegQueryStringValue(
-    HKEY_LOCAL_MACHINE,
-    'SYSTEM\CurrentControlSet\Control\Session Manager\Environment',
-    'Path', OrigPath)
-  then exit;
+
+  if not RegQueryStringValue(HKEY_LOCAL_MACHINE, EnvironmentKey, 'Path', OrigPath) then
+    exit;
 
   NewPath := OrigPath;
+
   P := Pos(';' + BinPath, NewPath);
   if P > 0 then
-    Delete(NewPath, P, Length(';' + BinPath));
+    Delete(NewPath, P, Length(';' + BinPath))
+  else if CompareText(NewPath, BinPath) = 0 then
+    NewPath := ''
+  else if CompareText(Copy(NewPath, 1, Length(BinPath) + 1), BinPath + ';') = 0 then
+    Delete(NewPath, 1, Length(BinPath) + 1);
 
   if NewPath <> OrigPath then
-    RegWriteExpandStringValue(
-      HKEY_LOCAL_MACHINE,
-      'SYSTEM\CurrentControlSet\Control\Session Manager\Environment',
-      'Path', NewPath);
+  begin
+    if RegWriteExpandStringValue(HKEY_LOCAL_MACHINE, EnvironmentKey, 'Path', NewPath) then
+      RefreshEnvironment();
+  end;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+    AddBinToSystemPath();
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep = ssPostUninstall then
+    RemoveBinFromSystemPath();
 end;

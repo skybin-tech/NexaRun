@@ -11,5 +11,7 @@ public class IpcRequest
     public string? LogStream { get; set; }
     public List<StartOptions>? BatchOptions { get; set; }
     public bool StartAfterImport { get; set; }
+    /// <summary>After restart/start, wait for port settle (default true). Restart-all passes false except on the last process.</summary>
+    public bool SettleAfterStart { get; set; } = true;
     public NexaRunSettings? Settings { get; set; }
 }

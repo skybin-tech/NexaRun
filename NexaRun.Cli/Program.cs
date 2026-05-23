@@ -10,10 +10,13 @@ var root = new RootCommand("NexaRun — process manager for Windows")
     ImportCommand.Build(client),
     StopCommand.Build(client),
     RestartCommand.Build(client),
+    RestartAllCommand.Build(client),
+    ClearAllCommand.Build(client),
     DeleteCommand.Build(client),
     ListCommand.Build(client),
     LogsCommand.Build(client),
-    DaemonCommand.Build()
+    DaemonCommand.Build(),
+    VersionCommand.Build()
 };
 
 return root.Parse(args).Invoke();

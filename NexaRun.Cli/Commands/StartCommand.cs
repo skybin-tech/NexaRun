@@ -10,14 +10,14 @@ public static class StartCommand
 {
     public static Command Build(IpcClient client)
     {
-        var execArg = new Argument<string>("executable")
+        var targetArg = new Argument<string>("target")
         {
-            Description = "Executable or command (npm, dotnet, node, etc.)"
+            Description = "Process id/name (start saved app) or executable (register and start new app)"
         };
 
         var nameOpt = new Option<string?>("--name")
         {
-            Description = "Process name (defaults to executable name)"
+            Description = "Process name when starting a new executable (defaults to executable name)"
         };
 
         var argsOpt = new Option<string?>("--args")
@@ -70,34 +70,69 @@ public static class StartCommand
             Description = "Prefix log lines with timestamps"
         };
 
-        var cmd = new Command("start", "Start a single process")
+        var cmd = new Command("start", "Start a process by id/name (PM2-style) or register a new executable")
         {
-            execArg, nameOpt, argsOpt, cwdOpt, noRestartOpt,
+            targetArg, nameOpt, argsOpt, cwdOpt, noRestartOpt,
             maxRestartsOpt, maxCpuOpt, maxMemOpt, outLogOpt, errLogOpt, logOpt, timeOpt
         };
 
         cmd.SetAction(async parseResult =>
         {
-            var executable = parseResult.GetValue(execArg)!;
-            var name = parseResult.GetValue(nameOpt) ?? Path.GetFileNameWithoutExtension(executable);
+            var target = parseResult.GetValue(targetArg)!;
 
-            return await StartOneAsync(client, name, executable,
-                parseResult.GetValue(argsOpt) ?? string.Empty,
-                parseResult.GetValue(cwdOpt) ?? string.Empty,
-                !parseResult.GetValue(noRestartOpt),
-                parseResult.GetValue(maxRestartsOpt),
-                parseResult.GetValue(maxCpuOpt),
-                parseResult.GetValue(maxMemOpt),
-                parseResult.GetValue(outLogOpt),
-                parseResult.GetValue(errLogOpt),
-                parseResult.GetValue(logOpt),
-                parseResult.GetValue(timeOpt));
+            if (WantsNewExecutable(parseResult, argsOpt, cwdOpt, nameOpt, outLogOpt, errLogOpt, logOpt,
+                    noRestartOpt, maxRestartsOpt, maxCpuOpt, maxMemOpt, timeOpt))
+            {
+                var name = parseResult.GetValue(nameOpt) ?? Path.GetFileNameWithoutExtension(target);
+                return await StartNewAsync(client, name, target,
+                    parseResult.GetValue(argsOpt) ?? string.Empty,
+                    parseResult.GetValue(cwdOpt) ?? string.Empty,
+                    !parseResult.GetValue(noRestartOpt),
+                    parseResult.GetValue(maxRestartsOpt),
+                    parseResult.GetValue(maxCpuOpt),
+                    parseResult.GetValue(maxMemOpt),
+                    parseResult.GetValue(outLogOpt),
+                    parseResult.GetValue(errLogOpt),
+                    parseResult.GetValue(logOpt),
+                    parseResult.GetValue(timeOpt));
+            }
+
+            var response = await client.Send(CliCommands.TargetRequest("start", target));
+            return CliOutput.Exit(response);
         });
 
         return cmd;
     }
 
-    private static async Task<int> StartOneAsync(
+    private static bool WantsNewExecutable(
+        ParseResult parseResult,
+        Option<string?> argsOpt,
+        Option<string?> cwdOpt,
+        Option<string?> nameOpt,
+        Option<string?> outLogOpt,
+        Option<string?> errLogOpt,
+        Option<string?> logOpt,
+        Option<bool> noRestartOpt,
+        Option<int?> maxRestartsOpt,
+        Option<double?> maxCpuOpt,
+        Option<long?> maxMemOpt,
+        Option<bool> timeOpt)
+    {
+        if (!string.IsNullOrWhiteSpace(parseResult.GetValue(argsOpt))) return true;
+        if (!string.IsNullOrWhiteSpace(parseResult.GetValue(cwdOpt))) return true;
+        if (!string.IsNullOrWhiteSpace(parseResult.GetValue(nameOpt))) return true;
+        if (!string.IsNullOrWhiteSpace(parseResult.GetValue(outLogOpt))) return true;
+        if (!string.IsNullOrWhiteSpace(parseResult.GetValue(errLogOpt))) return true;
+        if (!string.IsNullOrWhiteSpace(parseResult.GetValue(logOpt))) return true;
+        if (parseResult.GetValue(noRestartOpt)) return true;
+        if (parseResult.GetValue(maxRestartsOpt).HasValue) return true;
+        if (parseResult.GetValue(maxCpuOpt).HasValue) return true;
+        if (parseResult.GetValue(maxMemOpt).HasValue) return true;
+        if (parseResult.GetValue(timeOpt)) return true;
+        return false;
+    }
+
+    private static async Task<int> StartNewAsync(
         IpcClient client,
         string name,
         string executable,

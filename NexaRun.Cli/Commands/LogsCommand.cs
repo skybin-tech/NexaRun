@@ -1,4 +1,5 @@
 using System.CommandLine;
+using NexaRun.Cli;
 using NexaRun.Shared.Ipc;
 using NexaRun.Shared.Models;
 using Spectre.Console;
@@ -9,10 +10,7 @@ public static class LogsCommand
 {
     public static Command Build(IpcClient client)
     {
-        var nameArg = new Argument<string>("name")
-        {
-            Description = "Name of the process"
-        };
+        var targetArg = CliCommands.TargetArgument("logs");
 
         var linesOpt = new Option<int>("--lines")
         {
@@ -35,31 +33,31 @@ public static class LogsCommand
             Description = "Stream logs continuously (tail -f style)"
         };
 
-        var cmd = new Command("logs", "Show process logs") { nameArg, linesOpt, outOpt, errOpt, followOpt };
+        var cmd = new Command("logs", "Show process logs by id or name") { targetArg, linesOpt, outOpt, errOpt, followOpt };
 
         cmd.SetAction(async parseResult =>
         {
-            var name = parseResult.GetValue(nameArg)!;
+            var target = parseResult.GetValue(targetArg)!;
             var lines = parseResult.GetValue(linesOpt);
             var stream = parseResult.GetValue(errOpt) ? "err"
                 : parseResult.GetValue(outOpt) ? "out"
                 : null;
 
             if (parseResult.GetValue(followOpt))
-                return await FollowLogs(client, name, lines, stream);
+                return await FollowLogs(client, target, lines, stream);
 
-            return await PrintLogs(client, name, lines, stream);
+            return await PrintLogs(client, target, lines, stream);
         });
 
         return cmd;
     }
 
-    private static async Task<int> PrintLogs(IpcClient client, string name, int lines, string? stream)
+    private static async Task<int> PrintLogs(IpcClient client, string target, int lines, string? stream)
     {
         var response = await client.Send(new IpcRequest
         {
             Command = "logs",
-            ProcessName = name,
+            ProcessName = target,
             LogLines = lines,
             LogStream = stream
         });
@@ -74,7 +72,7 @@ public static class LogsCommand
         return 0;
     }
 
-    private static async Task<int> FollowLogs(IpcClient client, string name, int lines, string? stream)
+    private static async Task<int> FollowLogs(IpcClient client, string target, int lines, string? stream)
     {
         var lastLineCount = 0;
 
@@ -83,7 +81,7 @@ public static class LogsCommand
             var response = await client.Send(new IpcRequest
             {
                 Command = "logs",
-                ProcessName = name,
+                ProcessName = target,
                 LogLines = lines,
                 LogStream = stream
             });

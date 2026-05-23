@@ -9,17 +9,13 @@ public static class DeleteCommand
 {
     public static Command Build(IpcClient client)
     {
-        var nameArg = new Argument<string>("name")
-        {
-            Description = "Name of the process to delete"
-        };
-
-        var cmd = new Command("delete", "Remove a process from the managed list") { nameArg };
+        var targetArg = CliCommands.TargetArgument("delete");
+        var cmd = new Command("delete", "Remove a process from the managed list by id or name") { targetArg };
 
         cmd.SetAction(async parseResult =>
         {
-            var name = parseResult.GetValue(nameArg)!;
-            var response = await client.Send(new IpcRequest { Command = "delete", ProcessName = name });
+            var target = parseResult.GetValue(targetArg)!;
+            var response = await client.Send(CliCommands.TargetRequest("delete", target));
             return CliOutput.Exit(response);
         });
 

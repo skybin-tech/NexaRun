@@ -1,4 +1,5 @@
 using System.CommandLine;
+using NexaRun.Cli;
 using NexaRun.Cli.Display;
 using NexaRun.Shared.Ipc;
 using NexaRun.Shared.Models;
@@ -14,7 +15,7 @@ public static class ListCommand
 
         cmd.SetAction(async parseResult =>
         {
-            var response = await client.Send(new IpcRequest { Command = "list" });
+            var response = await client.Send(new IpcRequest { Command = "list" }, showProgress: false);
             if (!response.Success)
             {
                 AnsiConsole.MarkupLine($"[red]{Markup.Escape(response.Message)}[/]");

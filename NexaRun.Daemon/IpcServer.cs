@@ -62,10 +62,13 @@ public class IpcServer(ProcessManager processManager, ILogger<IpcServer> logger)
         {
             return request.Command switch
             {
-                "start"  when request.Options != null => await HandleStart(request.Options),
+                "start" when request.Options != null &&
+                    !string.IsNullOrWhiteSpace(request.Options.ExecutablePath) => await HandleStart(request.Options),
+                "start" when !string.IsNullOrWhiteSpace(request.ProcessName) =>
+                    await HandleStartExisting(request.ProcessName!),
                 "update" when request.Options != null => await HandleUpdate(request.Options),
                 "stop" => await HandleStop(request.ProcessName),
-                "restart" => await HandleRestart(request.ProcessName),
+                "restart" => await HandleRestart(request.ProcessName, request.SettleAfterStart),
                 "restart-all" => await HandleRestartAll(),
                 "delete" => await HandleDelete(request.ProcessName),
                 "clear-all" => await HandleClearAll(),
@@ -96,19 +99,30 @@ public class IpcServer(ProcessManager processManager, ILogger<IpcServer> logger)
         };
     }
 
-    private async Task<IpcResponse> HandleStop(string? name)
+    private async Task<IpcResponse> HandleStartExisting(string target)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            return new IpcResponse { Success = false, Message = "Process name required." };
-        var (success, message) = await processManager.Stop(name);
+        var (success, message, process) = await processManager.StartExisting(target);
+        return new IpcResponse
+        {
+            Success = success,
+            Message = message,
+            Processes = process != null ? [process] : null
+        };
+    }
+
+    private async Task<IpcResponse> HandleStop(string? target)
+    {
+        if (string.IsNullOrWhiteSpace(target))
+            return new IpcResponse { Success = false, Message = "Process id or name required." };
+        var (success, message) = await processManager.Stop(target);
         return new IpcResponse { Success = success, Message = message };
     }
 
-    private async Task<IpcResponse> HandleRestart(string? name)
+    private async Task<IpcResponse> HandleRestart(string? target, bool settleAfterStart)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            return new IpcResponse { Success = false, Message = "Process name required." };
-        var (success, message, process) = await processManager.Restart(name);
+        if (string.IsNullOrWhiteSpace(target))
+            return new IpcResponse { Success = false, Message = "Process id or name required." };
+        var (success, message, process) = await processManager.Restart(target, settleAfterStart);
         return new IpcResponse
         {
             Success = success,
@@ -124,11 +138,11 @@ public class IpcServer(ProcessManager processManager, ILogger<IpcServer> logger)
         return new IpcResponse { Success = success, Message = message, Processes = processes };
     }
 
-    private async Task<IpcResponse> HandleDelete(string? name)
+    private async Task<IpcResponse> HandleDelete(string? target)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            return new IpcResponse { Success = false, Message = "Process name required." };
-        var (success, message) = await processManager.Delete(name);
+        if (string.IsNullOrWhiteSpace(target))
+            return new IpcResponse { Success = false, Message = "Process id or name required." };
+        var (success, message) = await processManager.Delete(target);
         return new IpcResponse { Success = success, Message = message };
     }
 
@@ -144,10 +158,10 @@ public class IpcServer(ProcessManager processManager, ILogger<IpcServer> logger)
         return new IpcResponse { Success = true, Processes = processes };
     }
 
-    private async Task<IpcResponse> HandleLogs(string? name, int lines, string? stream)
+    private async Task<IpcResponse> HandleLogs(string? target, int lines, string? stream)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            return new IpcResponse { Success = false, Message = "Process name required." };
+        if (string.IsNullOrWhiteSpace(target))
+            return new IpcResponse { Success = false, Message = "Process id or name required." };
 
         var logStream = stream?.ToLowerInvariant() switch
         {
@@ -156,8 +170,8 @@ public class IpcServer(ProcessManager processManager, ILogger<IpcServer> logger)
             _ => LogStream.Combined
         };
 
-        var logs = await processManager.GetLogs(name, lines, logStream);
-        return new IpcResponse { Success = true, Logs = logs };
+        var (success, body) = await processManager.GetLogs(target, lines, logStream);
+        return new IpcResponse { Success = success, Message = success ? string.Empty : body, Logs = success ? body : null };
     }
 
     private async Task<IpcResponse> HandleUpdate(StartOptions options)
@@ -166,7 +180,7 @@ public class IpcServer(ProcessManager processManager, ILogger<IpcServer> logger)
         var all = await processManager.GetAll();
         var existing = all.FirstOrDefault(p => p.Name == options.Name);
         if (existing?.Status == ProcessStatus.Online)
-            await processManager.Stop(options.Name);
+            await processManager.Stop(existing.Id.ToString());
 
         var (success, message, process) = await processManager.Start(options);
         return new IpcResponse { Success = success, Message = message, Processes = process != null ? [process] : null };
@@ -190,11 +204,11 @@ public class IpcServer(ProcessManager processManager, ILogger<IpcServer> logger)
         return new IpcResponse { Success = success, Message = message, Settings = settings };
     }
 
-    private async Task<IpcResponse> HandleHistory(string? name)
+    private async Task<IpcResponse> HandleHistory(string? target)
     {
-        if (string.IsNullOrWhiteSpace(name))
-            return new IpcResponse { Success = false, Message = "Process name required." };
-        var history = await processManager.GetHistory(name);
-        return new IpcResponse { Success = true, RunHistory = history };
+        if (string.IsNullOrWhiteSpace(target))
+            return new IpcResponse { Success = false, Message = "Process id or name required." };
+        var (success, message, history) = await processManager.GetHistory(target);
+        return new IpcResponse { Success = success, Message = message, RunHistory = history };
     }
 }

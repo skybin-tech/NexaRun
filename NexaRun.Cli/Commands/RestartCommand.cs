@@ -9,17 +9,13 @@ public static class RestartCommand
 {
     public static Command Build(IpcClient client)
     {
-        var nameArg = new Argument<string>("name")
-        {
-            Description = "Name of the process to restart"
-        };
-
-        var cmd = new Command("restart", "Restart a process") { nameArg };
+        var targetArg = CliCommands.TargetArgument("restart");
+        var cmd = new Command("restart", "Restart a process by id or name") { targetArg };
 
         cmd.SetAction(async parseResult =>
         {
-            var name = parseResult.GetValue(nameArg)!;
-            var response = await client.Send(new IpcRequest { Command = "restart", ProcessName = name });
+            var target = parseResult.GetValue(targetArg)!;
+            var response = await client.Send(CliCommands.TargetRequest("restart", target));
             return CliOutput.Exit(response);
         });
 

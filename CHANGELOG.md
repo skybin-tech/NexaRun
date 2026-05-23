@@ -1,5 +1,24 @@
 # Changelog
 
+## [2026-05-23] — v1.0.7
+
+### Added
+- `NexaRun.Shared/ProcessTarget` — PM2-style id-or-name resolution; all CLI commands and daemon handlers now accept a numeric id (from `nexarun list`) or a name string
+- `NexaRun.Cli/CliCommands` — shared `TargetArgument` and `TargetRequest` helpers used by stop, restart, delete, logs, and start commands
+- `NexaRun.Cli/CliIpc` — `IpcClient.Send` extension with optional Spectre.Console spinner and elapsed timer; `RunWithProgress` helper; per-command status messages
+- `nexarun restart-all` — restarts every managed process one at a time with a Spectre progress bar; skips settle wait between processes, only waits after the last one
+- `nexarun clear-all` — stop and remove all processes at once
+- `nexarun version` — print assembly informational version
+- `ProcessManager.StartExisting` — start a saved (stopped/errored) process by id or name without re-registering it
+- `IpcRequest.SettleAfterStart` — lets restart-all skip the post-start wait between processes
+
+### Changed
+- `nexarun start` — unified target argument: pass an id/name to resume a saved process, or an executable with flags to register a new one
+- `nexarun stop/restart/delete/logs` — all accept id or name (was name-only)
+- `ProcessManager.Stop/Restart/Delete/GetLogs/GetHistory` — resolve via `ProcessTarget.TryResolve`; error messages include `[id] name`
+- `ProcessManager.GetLogs` and `GetHistory` return result tuples with success flag; daemon surfaces errors instead of silently returning empty
+- `IpcServer` — `"start"` dispatch splits: start-existing path when `Options.ExecutablePath` is absent; `HandleRestart` forwards `SettleAfterStart` flag
+
 ## [2026-05-22] — v1.0.6
 
 ### Added
@@ -7,6 +26,7 @@
 - Daemon **`restart-all`** — restart every process one by one without selecting a row in the tray
 
 ### Changed
+- Installer: `ChangesEnvironment=yes` and post-install PATH update so `nexarun` works in new terminals (`{app}\bin`)
 - Import no longer auto-starts processes (use **Start** or `nexarun import --start`)
 - **Restart All** uses daemon `restart-all`; no row selection required
 - Recovery check interval and email alerts read from `%APPDATA%\NexaRun\settings.json`

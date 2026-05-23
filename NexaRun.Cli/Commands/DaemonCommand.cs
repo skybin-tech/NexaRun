@@ -1,5 +1,6 @@
 using System.CommandLine;
 using System.Diagnostics;
+using NexaRun.Cli;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.ServiceProcess;
@@ -14,10 +15,10 @@ public static class DaemonCommand
     public static Command Build()
     {
         var startCmd = new Command("start", "Start the NexaRun daemon");
-        startCmd.SetAction(_ => StartDaemon());
+        startCmd.SetAction(async _ => await StartDaemonAsync());
 
         var stopCmd = new Command("stop", "Stop the NexaRun daemon");
-        stopCmd.SetAction(_ => StopDaemon());
+        stopCmd.SetAction(async _ => await StopDaemonAsync());
 
         return new Command("daemon", "Control the NexaRun daemon service")
         {
@@ -25,6 +26,12 @@ public static class DaemonCommand
             stopCmd
         };
     }
+
+    private static Task<int> StartDaemonAsync() =>
+        CliIpc.RunWithProgress("Starting NexaRun daemon", () => Task.FromResult(StartDaemon()));
+
+    private static Task<int> StopDaemonAsync() =>
+        CliIpc.RunWithProgress("Stopping NexaRun daemon", () => Task.FromResult(StopDaemon()));
 
     private static int StartDaemon()
     {

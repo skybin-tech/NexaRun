@@ -204,36 +204,67 @@ public class ProcessManager
         finally { _lock.Release(); }
     }
 
-    public async Task<(bool success, string message)> Stop(string name)
+    public async Task<(bool success, string message, NexaProcess? process)> StartExisting(string target)
+    {
+        await _lock.WaitAsync();
+        NexaProcess? p;
+        string? resolveError;
+        try
+        {
+            p = ProcessTarget.TryResolve(_processes, target, out resolveError);
+            if (p == null)
+                return (false, resolveError!, null);
+            if (p.Status == ProcessStatus.Online)
+                return (false, $"{ProcessTarget.Display(p)} is already online.", p);
+        }
+        finally { _lock.Release(); }
+
+        return await Start(ToStartOptions(p));
+    }
+
+    public async Task<(bool success, string message)> Stop(string target)
     {
         await _lock.WaitAsync();
         try
         {
-            var p = _processes.FirstOrDefault(x => x.Name == name);
-            if (p == null) return (false, $"No process named '{name}' found.");
-            if (p.Status != ProcessStatus.Online) return (false, $"Process '{name}' is not running.");
+            var p = ProcessTarget.TryResolve(_processes, target, out var resolveError);
+            if (p == null) return (false, resolveError!);
+            if (p.Status != ProcessStatus.Online)
+                return (false, $"{ProcessTarget.Display(p)} is not running.");
 
             p.Status = ProcessStatus.Stopping;
             await KillProcess(p, graceful: true);
             p.Status = ProcessStatus.Stopped;
             p.Pid = null;
             p.StatusReason = null;
-            RecordRunEnd(name, DateTime.UtcNow, exitCode: null, ProcessRunOutcome.Stopped);
+            RecordRunEnd(p.Name, DateTime.UtcNow, exitCode: null, ProcessRunOutcome.Stopped);
 
             await Persist();
             await PersistHistory();
-            return (true, $"Process '{name}' stopped.");
+            return (true, $"{ProcessTarget.Display(p)} stopped.");
         }
         finally { _lock.Release(); }
     }
 
-    public Task<(bool success, string message, NexaProcess? process)> Restart(string name) =>
-        Restart(name, settleAfterStart: true);
+    public Task<(bool success, string message, NexaProcess? process)> Restart(string target) =>
+        Restart(target, settleAfterStart: true);
 
-    public async Task<(bool success, string message, NexaProcess? process)> Restart(string name, bool settleAfterStart)
+    public async Task<(bool success, string message, NexaProcess? process)> Restart(string target, bool settleAfterStart)
     {
-        var (stopOk, stopMsg) = await Stop(name);
-        if (!stopOk && stopMsg != $"Process '{name}' is not running.")
+        await _lock.WaitAsync();
+        NexaProcess? resolved;
+        string? resolveError;
+        try
+        {
+            resolved = ProcessTarget.TryResolve(_processes, target, out resolveError);
+            if (resolved == null)
+                return (false, resolveError!, null);
+        }
+        finally { _lock.Release(); }
+
+        var name = resolved.Name;
+        var (stopOk, stopMsg) = await Stop(target);
+        if (!stopOk && stopMsg != $"{ProcessTarget.Display(resolved)} is not running.")
             return (false, stopMsg, null);
 
         await Task.Delay(ProcessDefaults.RestartSettleMs);
@@ -244,7 +275,7 @@ public class ProcessManager
         try
         {
             p = _processes.FirstOrDefault(x => x.Name == name);
-            if (p == null) return (false, $"No process named '{name}' found.", null);
+            if (p == null) return (false, $"{ProcessTarget.Display(resolved)} was removed.", null);
             opts = ToStartOptions(p);
         }
         finally { _lock.Release(); }
@@ -286,24 +317,24 @@ public class ProcessManager
         return (true, $"Restart All finished: {succeeded} succeeded, {failed} failed (of {names.Count}).");
     }
 
-    public async Task<(bool success, string message)> Delete(string name)
+    public async Task<(bool success, string message)> Delete(string target)
     {
         await _lock.WaitAsync();
         try
         {
-            var p = _processes.FirstOrDefault(x => x.Name == name);
-            if (p == null) return (false, $"No process named '{name}' found.");
+            var p = ProcessTarget.TryResolve(_processes, target, out var resolveError);
+            if (p == null) return (false, resolveError!);
 
             if (p.Status == ProcessStatus.Online)
             {
                 await KillProcess(p, graceful: true);
-                RecordRunEnd(name, DateTime.UtcNow, exitCode: null, ProcessRunOutcome.Stopped);
+                RecordRunEnd(p.Name, DateTime.UtcNow, exitCode: null, ProcessRunOutcome.Stopped);
             }
 
             _processes.Remove(p);
             await Persist();
             await PersistHistory();
-            return (true, $"Process '{name}' deleted.");
+            return (true, $"{ProcessTarget.Display(p)} deleted.");
         }
         finally { _lock.Release(); }
     }
@@ -424,26 +455,27 @@ public class ProcessManager
         process.Url = ProcessUrlHelper.ResolveUrl(options.Url, options.Arguments, options.Environment);
     }
 
-    public async Task<string> GetLogs(string name, int lines = 50, LogStream stream = LogStream.Combined)
+    public async Task<(bool success, string body)> GetLogs(string target, int lines = 50, LogStream stream = LogStream.Combined)
     {
         await _lock.WaitAsync();
         NexaProcess? p;
-        try { p = _processes.FirstOrDefault(x => x.Name == name); }
+        string? resolveError;
+        try { p = ProcessTarget.TryResolve(_processes, target, out resolveError); }
         finally { _lock.Release(); }
 
-        if (p == null) return $"No process named '{name}' found.";
+        if (p == null) return (false, resolveError!);
 
         var path = ResolveLogPathForRead(p, stream);
-        if (!File.Exists(path)) return "(no logs yet)";
+        if (!File.Exists(path)) return (true, "(no logs yet)");
 
         try
         {
             var text = await LogFileHelper.ReadTailAsync(path, lines);
-            return string.IsNullOrWhiteSpace(text) ? "(no logs yet)" : text;
+            return (true, string.IsNullOrWhiteSpace(text) ? "(no logs yet)" : text);
         }
         catch (Exception ex)
         {
-            return $"⚠ Could not read log file '{path}': {ex.Message}";
+            return (false, $"Could not read log file '{path}': {ex.Message}");
         }
     }
 
@@ -810,16 +842,21 @@ public class ProcessManager
         WriteProcessEvent(p, reason);
     }
 
-    public async Task<List<ProcessRun>> GetHistory(string name)
+    public async Task<(bool success, string message, List<ProcessRun> runs)> GetHistory(string target)
     {
         await _lock.WaitAsync();
         try
         {
+            var p = ProcessTarget.TryResolve(_processes, target, out var resolveError);
+            if (p == null)
+                return (false, resolveError!, []);
+
             var cutoff = DateTime.UtcNow.AddDays(-7);
-            return _runHistory
-                .Where(r => r.ProcessName == name && r.StartedAt >= cutoff)
+            var runs = _runHistory
+                .Where(r => r.ProcessName == p.Name && r.StartedAt >= cutoff)
                 .OrderByDescending(r => r.StartedAt)
                 .ToList();
+            return (true, string.Empty, runs);
         }
         finally { _lock.Release(); }
     }

@@ -10,9 +10,33 @@ Run `NexaRun-Setup.exe` and follow the wizard.
 
 The installer will:
 - Install the **NexaRun Daemon** as a Windows Service that starts automatically with Windows
-- Add the **`nexarun` CLI** to your system PATH
+- Copy the CLI to `C:\Program Files\NexaRun\bin\nexarun.exe` and append that folder to the **system PATH**
 - Launch the **NexaRun tray app** so you can start managing processes immediately
 - Ship a sample `nexarun-processes.json` for JSON import
+
+After install, **open a new Command Prompt or PowerShell window** (existing terminals do not pick up PATH until restarted). Then run:
+
+```powershell
+nexarun list
+```
+
+If `nexarun` is still not found:
+
+1. **Close all terminals** and open a new one (PATH is read when the shell starts).
+2. Check system PATH includes `C:\Program Files\NexaRun\bin` (Settings → System → About → Advanced system settings → Environment Variables → System `Path`).
+3. **Repair PATH** (Administrator PowerShell):
+
+```powershell
+& "C:\Program Files\NexaRun\fix-path.ps1"
+```
+
+Or reinstall / run the latest `NexaRun-Setup.exe` (the installer runs `fix-path.ps1` automatically).
+
+Until PATH works, use the full path:
+
+```powershell
+& "C:\Program Files\NexaRun\bin\nexarun.exe" list
+```
 
 To build the installer from source: run `installer\generate-icon.ps1` then `installer\build.ps1` (requires Inno Setup 6).
 
@@ -101,13 +125,14 @@ Daemon is not running. Start it with: nexarun daemon start
 
 ```text
 nexarun
-├── start <executable>     Start one process
+├── start <id|name|exe>  Start saved process or new executable
 ├── import <file.json>     Import processes from JSON
-├── stop <name>            Stop a process
-├── restart <name>         Restart a process
-├── delete <name>          Remove from managed list
-├── list                   List all processes
-├── logs <name>            Show process logs
+├── stop <id|name>         Stop a process
+├── restart <id|name>      Restart a process
+├── restart-all            Restart every process
+├── delete <id|name>       Remove from managed list
+├── list                   List all processes (shows id)
+├── logs <id|name>         Show process logs
 └── daemon
     ├── start              Start daemon (service or dev exe)
     └── stop               Stop daemon service
@@ -115,10 +140,10 @@ nexarun
 
 ### `nexarun start`
 
-Start a single process.
+Start a **saved** process by id/name (`nexarun start 0`) or register and run a **new** executable (`nexarun start dotnet --args "run" ...`).
 
 ```powershell
-nexarun start <executable> [options]
+nexarun start <id|name|executable> [options]
 ```
 
 | Option | Description |
@@ -169,18 +194,29 @@ nexarun list
 
 Shows id, name, status, pid, restarts, memory, and uptime.
 
-### `nexarun stop` / `restart` / `delete`
+### `nexarun stop` / `restart` / `delete` / `start` (by id or name)
+
+Like PM2, use the **id** from `nexarun list` or the process **name**:
 
 ```powershell
-nexarun stop <name>
-nexarun restart <name>
-nexarun delete <name>
+nexarun list
+nexarun stop 0
+nexarun restart 3
+nexarun delete myapi
+nexarun start 0          # start a stopped saved process by id
+nexarun start myapi      # start by name
+```
+
+To register a **new** executable (not an existing saved process), pass flags such as `--args`, `--cwd`, or `--name`:
+
+```powershell
+nexarun start dotnet --name api --args "run" --cwd C:\Api
 ```
 
 ### `nexarun logs`
 
 ```powershell
-nexarun logs <name> [options]
+nexarun logs <id|name> [options]
 ```
 
 | Option | Default | Description |
@@ -214,10 +250,11 @@ Starts or stops the Windows service `NexaRunDaemon` (or the dev daemon exe when 
 | Start | `nexarun start dotnet --name api --args "run" --cwd C:\Api` |
 | Import | `nexarun import nexarun-processes.json` |
 | List | `nexarun list` |
-| Stop | `nexarun stop api` |
-| Restart | `nexarun restart api` |
-| Delete | `nexarun delete api` |
-| Logs | `nexarun logs api --follow` |
+| Stop | `nexarun stop 0` or `nexarun stop api` |
+| Restart | `nexarun restart 0` |
+| Delete | `nexarun delete 0` |
+| Start saved | `nexarun start 0` |
+| Logs | `nexarun logs 0 --follow` |
 | Daemon | `nexarun daemon start` |
 
 ```powershell
