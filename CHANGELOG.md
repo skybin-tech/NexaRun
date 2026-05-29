@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-05-30
+- `NexaRun.Tray/NexaRun.Tray.csproj` — bump Avalonia + Avalonia.Desktop + Avalonia.Themes.Fluent 12.0.3→12.0.4
+
 ## 2026-05-23
 - **NexaRun.Tray:** Refactor Avalonia 12 window code-behind to typed patterns; align tray csproj packages
 
