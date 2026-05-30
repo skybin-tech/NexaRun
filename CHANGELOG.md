@@ -1,6 +1,13 @@
 # Changelog
 
-## 2026-05-30
+## [2026-05-30] — v1.0.8
+
+### Added
+- `nexarun restart all` — PM2-style alias for restarting every managed process (same behavior as `nexarun restart-all`)
+- `NexaRun.Cli/RestartAllRunner` — shared CLI orchestration for restart-all: per-app Spectre progress bar, id-based restarts, settle wait only on the last process
+
+### Changed
+- `nexarun restart` — accepts `all` as a target in addition to id or name; help text documents PM2-style usage
 - `NexaRun.Tray/NexaRun.Tray.csproj` — bump Avalonia + Avalonia.Desktop + Avalonia.Themes.Fluent 12.0.3→12.0.4
 
 ## 2026-05-23

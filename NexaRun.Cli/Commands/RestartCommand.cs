@@ -9,12 +9,15 @@ public static class RestartCommand
 {
     public static Command Build(IpcClient client)
     {
-        var targetArg = CliCommands.TargetArgument("restart");
-        var cmd = new Command("restart", "Restart a process by id or name") { targetArg };
+        var targetArg = CliCommands.TargetArgument("restart", "or `all` to restart every process (PM2-style)");
+        var cmd = new Command("restart", "Restart a process by id, name, or all") { targetArg };
 
         cmd.SetAction(async parseResult =>
         {
             var target = parseResult.GetValue(targetArg)!;
+            if (RestartAllRunner.IsAllTarget(target))
+                return await RestartAllRunner.Run(client);
+
             var response = await client.Send(CliCommands.TargetRequest("restart", target));
             return CliOutput.Exit(response);
         });

@@ -9,7 +9,7 @@
 #   - Inno Setup 6 or 7 (ISCC.exe on PATH, or default install folder)
 
 param(
-    [string]$Version = "1.0.6",
+    [string]$Version = "1.0.8",
     [string]$OutDir  = "$PSScriptRoot\output"
 )
 

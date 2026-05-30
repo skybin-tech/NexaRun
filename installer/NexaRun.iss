@@ -5,7 +5,7 @@
 ; Do NOT point PubDir at bin\Debug or bin\Release under each project — only installer\publish.
 
 #ifndef AppVersion
-  #define AppVersion "1.0.6"
+  #define AppVersion "1.0.8"
 #endif
 #ifndef PubDir
   #define PubDir "publish"
@@ -221,6 +221,6 @@ end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
-  if CurUninstallStep = ssPostUninstall then
+  if CurUninstallStep = usPostUninstall then
     RemoveBinFromSystemPath();
 end;
