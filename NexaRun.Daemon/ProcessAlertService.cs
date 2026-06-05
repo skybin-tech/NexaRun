@@ -2,8 +2,8 @@ using System.Net;
 using System.Net.Mail;
 using Amazon;
 using Amazon.Runtime;
-using Amazon.SimpleEmail;
-using Amazon.SimpleEmail.Model;
+using Amazon.SimpleEmailV2;
+using Amazon.SimpleEmailV2.Model;
 using NexaRun.Shared.Config;
 using NexaRun.Shared.Models;
 
@@ -86,16 +86,19 @@ public class ProcessAlertService(ILogger<ProcessAlertService> logger)
             ? "us-east-1"
             : settings.AwsRegion.Trim();
 
-        using var client = new AmazonSimpleEmailServiceClient(credentials, RegionEndpoint.GetBySystemName(regionName));
+        using var client = new AmazonSimpleEmailServiceV2Client(credentials, RegionEndpoint.GetBySystemName(regionName));
 
         var response = await client.SendEmailAsync(new SendEmailRequest
         {
-            Source = settings.AlertEmailFrom!.Trim(),
+            FromEmailAddress = settings.AlertEmailFrom!.Trim(),
             Destination = new Destination { ToAddresses = [settings.AlertEmailTo!.Trim()] },
-            Message = new Message
+            Content = new EmailContent
             {
-                Subject = new Content(subject),
-                Body = new Body { Text = new Content { Data = body, Charset = "UTF-8" } }
+                Simple = new Message
+                {
+                    Subject = new Content { Data = subject, Charset = "UTF-8" },
+                    Body = new Body { Text = new Content { Data = body, Charset = "UTF-8" } }
+                }
             }
         });
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-06-05]
+
+### Changed
+- `NexaRun.Daemon` — upgrade `AWSSDK.SimpleEmail` to `AWSSDK.SimpleEmailV2` (v4.0.14) with API updates to use SendEmailV2 request structure
+- `ProcessAlertService` — migrate from Amazon.SimpleEmail to Amazon.SimpleEmailV2; update SendEmailRequest to use V2 API (FromEmailAddress, EmailContent with nested Message structure)
+
 ## [2026-05-30] — v1.0.8
 
 ### Added
