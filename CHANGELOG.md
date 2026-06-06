@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026-06-06]
+
+### Changed
+- `NexaRun.Cli/NexaRun.Cli.csproj` — bump `Spectre.Console` 0.55.2→0.56.0
+- `NexaRun.Daemon/NexaRun.Daemon.csproj` — bump `AWSSDK.SimpleEmailV2` 4.0.14.1→4.0.14.2
+
 ## [2026-06-05]
 
 ### Changed
