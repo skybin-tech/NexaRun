@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-06-15
+- `NexaRun.Daemon.csproj` — bump package dependency versions
+
 ## 2026-06-10
 - All `.csproj` files — bump `Microsoft.EntityFrameworkCore` and `Microsoft.Extensions.Configuration.Json` from 10.0.8 → 10.0.9
 
