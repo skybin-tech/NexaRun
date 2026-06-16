@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-06-15
+- `NexaRun.Daemon` — bump `AWSSDK.SimpleEmailV2` 4.0.14.5 → 4.0.14.6
 - `NexaRun.Daemon.csproj` — bump package dependency versions
 
 ## 2026-06-10
