@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-06-17
+- `NexaRun.Daemon` — bump `AWSSDK.SimpleEmailV2` 4.0.14.6 → 4.0.14.7
+
 ## 2026-06-16
 - `NexaRun.Daemon/Properties/launchSettings.json` — set `launchBrowser: false` on the debug profile
 
