@@ -24,6 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <AvaloniaResource Include="Assets\ToolbarIcons.axaml" />
     <AvaloniaResource Include="..\installer\assets\NexaRun.ico" Link="Assets\NexaRun.ico" />
     <None Include="..\nexarun-processes.json" Link="nexarun-processes.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

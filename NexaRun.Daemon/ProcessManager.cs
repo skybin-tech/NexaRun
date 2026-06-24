@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 using NexaRun.Shared;
 using NexaRun.Shared.Config;
@@ -479,6 +480,39 @@ public class ProcessManager
         }
     }
 
+    public async Task<(bool success, string message)> ClearLogs(string target)
+    {
+        await _lock.WaitAsync();
+        NexaProcess? p;
+        string? resolveError;
+        try { p = ProcessTarget.TryResolve(_processes, target, out resolveError); }
+        finally { _lock.Release(); }
+
+        if (p == null) return (false, resolveError!);
+
+        try
+        {
+            if (_logSessions.TryGetValue(p.Id, out var session))
+            {
+                session.ClearAll();
+            }
+            else
+            {
+                foreach (var path in LogFileHelper.UniquePaths(p.LogFile, p.OutLogFile, p.ErrorLogFile))
+                {
+                    LogFileHelper.ClearFile(path);
+                    LogFileHelper.DeleteRotated(path);
+                }
+            }
+
+            return (true, $"Cleared logs for [{p.Id}] {p.Name}.");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Could not clear logs for [{p.Id}] {p.Name}: {ex.Message}");
+        }
+    }
+
     private static void FixLegacyCombinedLogPath(NexaProcess p)
     {
         if (string.IsNullOrWhiteSpace(p.OutLogFile) || string.IsNullOrWhiteSpace(p.ErrorLogFile))
@@ -932,6 +966,8 @@ public class ProcessManager
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
+                    StandardOutputEncoding = Encoding.UTF8,
+                    StandardErrorEncoding = Encoding.UTF8,
                     CreateNoWindow = true,
                     WindowStyle = ProcessWindowStyle.Hidden
                 };

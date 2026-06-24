@@ -8,7 +8,13 @@
 
     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0 0 0 8">
       <TextBlock x:Name="TitleText" FontSize="14" FontWeight="Bold" VerticalAlignment="Center" />
-      <Button x:Name="RefreshBtn" Content="⟳ Refresh" />
+      <Button x:Name="RefreshBtn">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <PathIcon Width="14" Height="14" Data="{StaticResource ToolbarIconRefresh}" />
+          <TextBlock Text="Refresh" VerticalAlignment="Center" />
+        </StackPanel>
+      </Button>
+      <Button x:Name="ClearLogBtn" Content="Clear Log" Foreground="Salmon" />
       <CheckBox x:Name="AutoScrollBox" Content="Auto-scroll" IsChecked="True" VerticalAlignment="Center" />
     </StackPanel>
 

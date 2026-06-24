@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace NexaRun.Shared;
 
@@ -32,6 +33,8 @@ public static class ProcessLaunchHelper
         {
             psi.RedirectStandardOutput = true;
             psi.RedirectStandardError = true;
+            psi.StandardOutputEncoding = Encoding.UTF8;
+            psi.StandardErrorEncoding = Encoding.UTF8;
         }
 
         if (environment != null)

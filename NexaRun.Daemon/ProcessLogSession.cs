@@ -1,9 +1,13 @@
 using NexaRun.Shared;
+using System.Text;
 
 namespace NexaRun.Daemon;
 
 public sealed class ProcessLogSession : IDisposable
 {
+    private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
+
+    private readonly object _writeLock = new();
     private readonly bool _timestamps;
     private readonly Dictionary<string, StreamWriter> _writersByPath = new(StringComparer.OrdinalIgnoreCase);
     private readonly string? _combinedPath;
@@ -42,19 +46,40 @@ public sealed class ProcessLogSession : IDisposable
 
     public void WriteSystem(string line) => WriteToPath(_combinedPath, line);
 
+    public void ClearAll()
+    {
+        lock (_writeLock)
+        {
+            foreach (var writer in _writersByPath.Values)
+                writer.Dispose();
+            _writersByPath.Clear();
+
+            foreach (var path in LogFileHelper.UniquePaths(_combinedPath, _outPath, _errPath))
+            {
+                LogFileHelper.ClearFile(path);
+                LogFileHelper.DeleteRotated(path);
+                TryOpen(path);
+            }
+        }
+    }
+
     private void WriteToPath(string? path, string line)
     {
         if (path == null) return;
-        if (!_writersByPath.TryGetValue(path, out var writer)) return;
 
-        try
+        lock (_writeLock)
         {
-            var text = _timestamps ? $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}: {line}" : line;
-            writer.WriteLine(text);
-        }
-        catch (IOException)
-        {
-            // Avoid crashing output handlers if the file is temporarily locked.
+            if (!_writersByPath.TryGetValue(path, out var writer)) return;
+
+            try
+            {
+                var text = _timestamps ? $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}: {line}" : line;
+                writer.WriteLine(text);
+            }
+            catch (IOException)
+            {
+                // Avoid crashing output handlers if the file is temporarily locked.
+            }
         }
     }
 
@@ -81,7 +106,7 @@ public sealed class ProcessLogSession : IDisposable
             Directory.CreateDirectory(dir);
 
         var stream = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
-        return new StreamWriter(stream) { AutoFlush = true };
+        return new StreamWriter(stream, Utf8NoBom) { AutoFlush = true };
     }
 
     private static void RotateIfNeeded(string path)
@@ -111,8 +136,11 @@ public sealed class ProcessLogSession : IDisposable
 
     public void Dispose()
     {
-        foreach (var w in _writersByPath.Values)
-            w.Dispose();
-        _writersByPath.Clear();
+        lock (_writeLock)
+        {
+            foreach (var w in _writersByPath.Values)
+                w.Dispose();
+            _writersByPath.Clear();
+        }
     }
 }

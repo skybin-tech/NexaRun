@@ -27,7 +27,7 @@ public partial class DashboardWindow : Window
     private Button _historyTabBtn = null!, _logsTabBtn = null!;
     private DockPanel _logsPanel = null!;
     private TextBlock _logsTitle = null!;
-    private Button _logsRefreshBtn = null!;
+    private Button _logsRefreshBtn = null!, _logsClearBtn = null!;
     private CheckBox _logsAutoScrollBox = null!;
     private CheckBox _logsLiveBox = null!;
     private ScrollViewer _logsScroller = null!;
@@ -71,6 +71,7 @@ public partial class DashboardWindow : Window
         _logsPanel     = this.FindControl<DockPanel>("LogsPanel")!;
         _logsTitle     = this.FindControl<TextBlock>("LogsTitle")!;
         _logsRefreshBtn = this.FindControl<Button>("LogsRefreshBtn")!;
+        _logsClearBtn   = this.FindControl<Button>("LogsClearBtn")!;
         _logsAutoScrollBox = this.FindControl<CheckBox>("LogsAutoScrollBox")!;
         _logsLiveBox     = this.FindControl<CheckBox>("LogsLiveBox")!;
         _logsScroller  = this.FindControl<ScrollViewer>("LogsScroller")!;
@@ -88,6 +89,7 @@ public partial class DashboardWindow : Window
         _historyTabBtn.Click += async (_, _) => await ShowHistoryTab();
         _logsTabBtn.Click += async (_, _) => await ShowLogsTab();
         _logsRefreshBtn.Click += async (_, _) => await RefreshLogs();
+        _logsClearBtn.Click += async (_, _) => await ClearLogs();
         _logsLiveBox.IsCheckedChanged += (_, _) =>
         {
             if (_timer != null && _detailView == DetailView.Logs)
@@ -324,6 +326,31 @@ public partial class DashboardWindow : Window
         _logsBox.Text = response.Logs ?? string.Empty;
         if (_logsAutoScrollBox.IsChecked == true)
             _logsScroller.ScrollToEnd();
+    }
+
+    private async Task ClearLogs()
+    {
+        if (string.IsNullOrEmpty(_selectedName)) return;
+
+        var dlg = new ConfirmDialog(
+            $"Clear logs for '{_selectedName}'?",
+            "Deletes the on-disk log files for this process. New output will continue to be captured.");
+        var confirmed = await dlg.ShowDialog<bool>(this);
+        if (!confirmed) return;
+
+        var response = await _ipc.Send(new IpcRequest
+        {
+            Command = "clear-logs",
+            ProcessName = _selectedName
+        });
+
+        if (!response.Success)
+        {
+            _logsBox.Text = response.Message;
+            return;
+        }
+
+        await RefreshLogs();
     }
 
     private static List<UptimeDayBar> BuildUptimeBars(List<ProcessRun> history)

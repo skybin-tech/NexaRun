@@ -13,6 +13,7 @@ public partial class LogsWindow : Window
 
     private TextBlock _titleText = null!;
     private Button _refreshBtn = null!;
+    private Button _clearLogBtn = null!;
     private CheckBox _autoScrollBox = null!;
     private ScrollViewer _scroller = null!;
     private TextBox _logBox = null!;
@@ -29,6 +30,7 @@ public partial class LogsWindow : Window
 
         _titleText    = this.FindControl<TextBlock>("TitleText")!;
         _refreshBtn   = this.FindControl<Button>("RefreshBtn")!;
+        _clearLogBtn  = this.FindControl<Button>("ClearLogBtn")!;
         _autoScrollBox= this.FindControl<CheckBox>("AutoScrollBox")!;
         _scroller     = this.FindControl<ScrollViewer>("Scroller")!;
         _logBox       = this.FindControl<TextBox>("LogBox")!;
@@ -37,6 +39,7 @@ public partial class LogsWindow : Window
         _titleText.Text = processName;
 
         _refreshBtn.Click += async (_, _) => await Refresh();
+        _clearLogBtn.Click += async (_, _) => await ClearLog();
         Opened  += async (_, _) => { await Refresh(); StartTimer(); };
         Closing += (_, _) => _timer?.Stop();
     }
@@ -63,5 +66,28 @@ public partial class LogsWindow : Window
 
         if (_autoScrollBox.IsChecked == true)
             _scroller.ScrollToEnd();
+    }
+
+    private async Task ClearLog()
+    {
+        var dlg = new ConfirmDialog(
+            $"Clear logs for '{_processName}'?",
+            "Deletes the on-disk log files for this process. New output will continue to be captured.");
+        var confirmed = await dlg.ShowDialog<bool>(this);
+        if (!confirmed) return;
+
+        var response = await _ipc.Send(new IpcRequest
+        {
+            Command = "clear-logs",
+            ProcessName = _processName
+        });
+
+        if (!response.Success)
+        {
+            _logBox.Text = response.Message;
+            return;
+        }
+
+        await Refresh();
     }
 }

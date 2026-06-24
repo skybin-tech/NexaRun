@@ -74,6 +74,7 @@ public class IpcServer(ProcessManager processManager, ILogger<IpcServer> logger)
                 "clear-all" => await HandleClearAll(),
                 "list" => await HandleList(),
                 "logs" => await HandleLogs(request.ProcessName, request.LogLines ?? 50, request.LogStream),
+                "clear-logs" => await HandleClearLogs(request.ProcessName),
                 "history" => await HandleHistory(request.ProcessName),
                 "import" when request.BatchOptions != null => await HandleImport(request.BatchOptions, request.StartAfterImport),
                 "get-settings" => await HandleGetSettings(),
@@ -172,6 +173,15 @@ public class IpcServer(ProcessManager processManager, ILogger<IpcServer> logger)
 
         var (success, body) = await processManager.GetLogs(target, lines, logStream);
         return new IpcResponse { Success = success, Message = success ? string.Empty : body, Logs = success ? body : null };
+    }
+
+    private async Task<IpcResponse> HandleClearLogs(string? target)
+    {
+        if (string.IsNullOrWhiteSpace(target))
+            return new IpcResponse { Success = false, Message = "Process id or name required." };
+
+        var (success, message) = await processManager.ClearLogs(target);
+        return new IpcResponse { Success = success, Message = message };
     }
 
     private async Task<IpcResponse> HandleUpdate(StartOptions options)

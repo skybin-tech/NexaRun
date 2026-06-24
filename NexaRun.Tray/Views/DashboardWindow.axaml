@@ -20,8 +20,12 @@
           <TextBlock x:Name="StatusText" Foreground="#f97316"
                      VerticalAlignment="Center" FontSize="13"/>
         </StackPanel>
-        <Button x:Name="RefreshBtn" Grid.Column="1"
-                Content="↻ Refresh" Padding="10,4"/>
+        <Button x:Name="RefreshBtn" Grid.Column="1" Padding="10,4">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <PathIcon Width="14" Height="14" Data="{StaticResource ToolbarIconRefresh}" />
+            <TextBlock Text="Refresh" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
       </Grid>
     </Border>
 
@@ -111,7 +115,13 @@
                       Spacing="8" Margin="16,8,16,8">
             <TextBlock x:Name="LogsTitle" FontSize="13" FontWeight="SemiBold"
                        VerticalAlignment="Center"/>
-            <Button x:Name="LogsRefreshBtn" Content="⟳ Refresh" Padding="10,4"/>
+            <Button x:Name="LogsRefreshBtn" Padding="10,4">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <PathIcon Width="14" Height="14" Data="{StaticResource ToolbarIconRefresh}" />
+                <TextBlock Text="Refresh" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+            <Button x:Name="LogsClearBtn" Content="Clear Log" Foreground="Salmon" Padding="10,4" />
             <CheckBox x:Name="LogsAutoScrollBox" Content="Auto-scroll"
                       IsChecked="True" VerticalAlignment="Center"/>
             <CheckBox x:Name="LogsLiveBox" Content="Live update"
