@@ -6,6 +6,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using NexaRun.Shared;
 using NexaRun.Shared.Ipc;
+using NexaRun.Tray.Helpers;
 using NexaRun.Tray.Services;
 using NexaRun.Tray.Views;
 
@@ -30,14 +31,26 @@ public class App : Application
             TrayCrashReporter.Report("UIThread", e.Exception, isTerminating: true);
         };
 
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-        {
-            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-            _config = new TrayConfigService(_ipc);
-            BuildTray(desktop);
-        }
-
         base.OnFrameworkInitializationCompleted();
+
+        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
+            return;
+
+        desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        _config = new TrayConfigService(_ipc);
+
+        try
+        {
+            if (WindowsShellHelper.IsNotificationAreaAvailable())
+                BuildTray(desktop);
+            else
+                StartWindowOnlyMode(desktop, "Windows shell is not available (no Explorer). Running without tray icon.");
+        }
+        catch (Exception ex)
+        {
+            TrayCrashReporter.Report("BuildTray", ex, isTerminating: false);
+            StartWindowOnlyMode(desktop, $"Could not create tray icon: {ex.Message}");
+        }
     }
 
     private void BuildTray(IClassicDesktopStyleApplicationLifetime desktop)
@@ -57,13 +70,25 @@ public class App : Application
 
         _trayIcon = new TrayIcon
         {
-            Icon = CreateIcon(),
+            Icon = TrayIconHelper.LoadIcon(),
             ToolTipText = "NexaRun — right-click for menu",
             IsVisible = true,
             Menu = menu
         };
 
         _trayIcon.Clicked += (_, _) => ShowDashboard();
+        TrayIcon.SetIcons(this, new TrayIcons { _trayIcon });
+    }
+
+    private void StartWindowOnlyMode(IClassicDesktopStyleApplicationLifetime desktop, string reason)
+    {
+        TrayCrashReporter.Report("WindowOnlyMode", new InvalidOperationException(reason), isTerminating: false);
+        ShowDashboard();
+        desktop.Exit += (_, _) =>
+        {
+            _dashboardWindow?.Close();
+            _mainWindow?.Close();
+        };
     }
 
     private static void AddMenuItem(NativeMenu menu, string header, EventHandler click)
@@ -132,29 +157,5 @@ public class App : Application
     private void ShowSettings()
     {
         new SettingsWindow(_ipc).Show();
-    }
-
-    private static WindowIcon CreateIcon()
-    {
-        var bmp = new Avalonia.Media.Imaging.RenderTargetBitmap(new PixelSize(32, 32));
-        using (var ctx = bmp.CreateDrawingContext())
-        {
-            var bg = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.FromRgb(30, 30, 30));
-            var green = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.FromRgb(0, 220, 110));
-            var pen = new Avalonia.Media.Pen(green, 1.5);
-
-            ctx.DrawRectangle(bg, null, new Avalonia.Rect(1, 1, 30, 30), 4, 4);
-
-            var chevron = new Avalonia.Media.PathGeometry();
-            using (var fig = chevron.Open())
-            {
-                fig.BeginFigure(new Avalonia.Point(6, 10), false);
-                fig.LineTo(new Avalonia.Point(13, 16));
-                fig.LineTo(new Avalonia.Point(6, 22));
-            }
-            ctx.DrawGeometry(null, pen, chevron);
-            ctx.DrawLine(pen, new Avalonia.Point(16, 22), new Avalonia.Point(24, 22));
-        }
-        return new WindowIcon(bmp);
     }
 }

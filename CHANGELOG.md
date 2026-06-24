@@ -1,5 +1,14 @@
 # Changelog
 
+## [2026-06-24] — v1.0.9
+
+### Fixed
+- `NexaRun.Tray/Program.cs` — add `[STAThread]` so Win32 clipboard/COM works (fixes `CO_E_NOTINITIALIZED` crash on TextBox copy)
+- `NexaRun.Tray` — load tray icon from embedded `.ico` after platform init; window-only fallback when notification area unavailable; single-instance mutex
+
+### Changed
+- `NexaRun.Tray` — bump Avalonia + Avalonia.Desktop + Avalonia.Themes.Fluent 12.0.4→12.0.5; Avalonia.Controls.DataGrid 12.0.0→12.0.1
+
 ## 2026-06-17
 - `NexaRun.Daemon` — bump `AWSSDK.SimpleEmailV2` 4.0.14.6 → 4.0.14.7
 
