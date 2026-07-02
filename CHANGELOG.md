@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-07-03
+- `Directory.Build.props` — add strong-name signing via `skybin.snk` (retains v1.0.10 version and NuGet audit settings)
+- `NexaRun.Daemon` — bump `AWSSDK.SimpleEmailV2` 4.0.14.9 → 4.0.100.1
+
 ## 2026-06-29
 - `NexaRun.Cli` — bump `Spectre.Console` 0.57.0 → 0.57.1
 - `NexaRun.Daemon` — bump `AWSSDK.SimpleEmailV2` 4.0.14.8 → 4.0.14.9
