@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -16,10 +16,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
     <PackageReference Include="Spectre.Console" Version="0.57.1" />
     <PackageReference Include="System.CommandLine" Version="2.0.9" />
-    <PackageReference Include="System.ServiceProcess.ServiceController" Version="10.0.9" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="10.0.10" />
   </ItemGroup>
 
 </Project>

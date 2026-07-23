@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-07-23
+- Align Microsoft.Extensions.* and related System packages to 10.0.10 across Cli, Daemon, Shared, and Tray
+
 ## 2026-07-03
 - `Directory.Build.props` — add strong-name signing via `skybin.snk` (retains v1.0.10 version and NuGet audit settings)
 - `NexaRun.Daemon` — bump `AWSSDK.SimpleEmailV2` 4.0.14.9 → 4.0.100.1
