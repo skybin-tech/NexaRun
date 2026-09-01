@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
@@ -14,23 +13,19 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>..\installer\assets\NexaRun.ico</ApplicationIcon>
   </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="System.Diagnostics.EventLog" Version="10.0.10" />
-    <PackageReference Include="Avalonia" Version="12.0.5" />
-    <PackageReference Include="Avalonia.Controls.DataGrid" Version="12.0.1" />
-    <PackageReference Include="Avalonia.Desktop" Version="12.0.5" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.5" />
+    <PackageReference Include="System.Diagnostics.EventLog" Version="10.0.11" />
+    <PackageReference Include="Avalonia" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.1" />
   </ItemGroup>
-
   <ItemGroup>
     <AvaloniaResource Include="Assets\ToolbarIcons.axaml" />
     <AvaloniaResource Include="..\installer\assets\NexaRun.ico" Link="Assets\NexaRun.ico" />
     <None Include="..\nexarun-processes.json" Link="nexarun-processes.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\NexaRun.Shared\NexaRun.Shared.csproj" />
   </ItemGroup>
-
 </Project>

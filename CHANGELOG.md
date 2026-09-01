@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-01
+- Bump Microsoft.Extensions.* and System packages to 10.0.11 across Cli, Daemon, Shared, and Tray
+- Bump Avalonia 12.0.x → 12.1.x, Spectre.Console 0.57.1 → 0.57.2, System.CommandLine 2.0.9 → 2.0.11, Serilog.Sinks.File 7.0.0 → 8.0.0, and AWSSDK.SimpleEmailV2 4.0.100.1 → 4.0.103.1
+
 ## 2026-07-23
 - Align Microsoft.Extensions.* and related System packages to 10.0.10 across Cli, Daemon, Shared, and Tray
 
